@@ -1280,7 +1280,10 @@
         }
 
         function exportJsonBackup() {
-            const dataStr = JSON.stringify({ settings: appSettings, logs: attendanceLogs }, null, 2);
+            const backupSettings = { ...appSettings };
+            delete backupSettings.pinHash;
+            delete backupSettings.pinSalt;
+            const dataStr = JSON.stringify({ settings: backupSettings, logs: attendanceLogs }, null, 2);
             const blob = new Blob([dataStr], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
