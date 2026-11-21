@@ -1,0 +1,1523 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#059669">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>আমার হাজিরা ও ওভারটাইম</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class'
+        }
+    </script>
+    <!-- Google Fonts: Hind Siliguri for crisp Bengali typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Base Bengali Font & Native Android App Feel */
+        body {
+            font-family: 'Hind Siliguri', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+            user-select: text;
+            padding-bottom: 84px; /* Space for bottom nav */
+        }
+
+        /* Smooth transitions and tap feedback */
+        .tap-btn {
+            transition: transform 0.1s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+        }
+        .tap-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Custom scrollbar hiding for clean mobile UI */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #94a3b8;
+            border-radius: 9999px;
+        }
+
+        button, input, select, textarea { font: inherit; }
+        button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible { outline: 3px solid #0d9488; outline-offset: 2px; }
+        input, select, textarea { user-select: text; -webkit-user-select: text; }
+
+        /* Toast Animation */
+        @keyframes slideUpFade {
+            0% { opacity: 0; transform: translate(-50%, 20px); }
+            15% { opacity: 1; transform: translate(-50%, 0); }
+            85% { opacity: 1; transform: translate(-50%, 0); }
+            100% { opacity: 0; transform: translate(-50%, -10px); }
+        }
+        .toast-active {
+            animation: slideUpFade 2.4s ease forwards;
+        }
+    </style>
+</head>
+<body class="antialiased bg-slate-100 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-200">
+
+    <!-- Top App Header -->
+    <header class="sticky top-0 z-30 bg-emerald-700 dark:bg-emerald-900 text-white shadow-md">
+        <div class="max-w-lg mx-auto px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <!-- App Icon SVG -->
+                <div class="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center border border-white/20 shrink-0">
+                    <svg class="w-6 h-6 text-emerald-100" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                </div>
+                <div class="min-w-0">
+                    <h1 class="text-lg font-bold leading-tight tracking-wide truncate">আমার হাজিরা ও OT</h1>
+                    <p id="headerWorkerInfo" class="text-xs text-emerald-100 opacity-90 truncate">সহজ ওভারটাইম ও বেতন হিসাব</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 shrink-0">
+                <!-- Dark Mode Toggle -->
+                <button onclick="toggleDarkMode()" id="darkModeBtn" class="tap-btn p-2 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15" aria-label="ডার্ক মোড">
+                    <svg id="iconSun" class="w-5 h-5 hidden text-amber-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <svg id="iconMoon" class="w-5 h-5 text-emerald-100" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                </button>
+                <!-- Offline Badge -->
+                <span class="text-[11px] bg-emerald-800/80 dark:bg-emerald-950/80 border border-emerald-500/40 px-2 py-1 rounded-full font-medium flex items-center gap-1">
+                    <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                    অফলাইন
+                </span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="max-w-lg mx-auto px-3.5 pt-3.5 space-y-4">
+
+        <!-- Persistent Month Switcher Bar -->
+        <div class="bg-white dark:bg-slate-900 rounded-2xl px-3 py-2 shadow-xs border border-slate-200 dark:border-slate-800 flex items-center justify-between">
+            <button onclick="changeMonth(-1)" class="tap-btn p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-emerald-50" aria-label="আগের মাস">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+            </button>
+            <div class="text-center">
+                <span class="text-[11px] font-semibold text-slate-400 dark:text-slate-500 block leading-none">হিসাবের মাস</span>
+                <h2 id="currentMonthLabel" class="text-base font-bold text-slate-800 dark:text-white mt-0.5">নভেম্বর ২০২৬</h2>
+            </div>
+            <button onclick="changeMonth(1)" class="tap-btn p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-emerald-50" aria-label="পরের মাস">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+            </button>
+        </div>
+
+        <!-- ========================================================= -->
+        <!-- TAB 1: HOME / 1-TAP DAILY ENTRY & LIVE OVERVIEW           -->
+        <!-- ========================================================= -->
+        <section id="tab-home" class="space-y-4">
+
+            <!-- Monthly Quick Summary Banner -->
+            <div class="bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 dark:from-emerald-800 dark:via-emerald-900 dark:to-slate-900 rounded-2xl p-4 text-white shadow-lg">
+                <!-- 4 Key Counters Grid -->
+                <div class="grid grid-cols-4 gap-1.5 text-center mb-3">
+                    <div class="bg-white/10 backdrop-blur-xs rounded-xl p-2 border border-white/10">
+                        <p class="text-[11px] text-emerald-100">ওভারটাইম</p>
+                        <p id="sumOtHours" class="text-base font-bold text-white mt-0.5">০ ঘণ্টা</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-xs rounded-xl p-2 border border-white/10">
+                        <p class="text-[11px] text-emerald-100">নাইট</p>
+                        <p id="sumNightCount" class="text-base font-bold text-amber-300 mt-0.5">০ টি</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-xs rounded-xl p-2 border border-white/10">
+                        <p class="text-[11px] text-emerald-100">হলিডে</p>
+                        <p id="sumHolidayCount" class="text-base font-bold text-sky-200 mt-0.5">০ টি</p>
+                    </div>
+                    <div class="bg-white/10 backdrop-blur-xs rounded-xl p-2 border border-white/10">
+                        <p class="text-[11px] text-emerald-100">টিফিন</p>
+                        <p id="sumTiffinCount" class="text-base font-bold text-lime-200 mt-0.5">০ টি</p>
+                    </div>
+                </div>
+
+                <!-- Estimated Extra Bill & Bonus Status Bar -->
+                <div class="bg-black/20 rounded-xl px-3.5 py-2.5 flex items-center justify-between border border-white/10">
+                    <div>
+                        <span class="text-xs text-emerald-100 block">বাড়তি আয় (OT + নাইট + হলিডে + টিফিন)</span>
+                        <span id="bonusBadgeMini" class="text-[11px] text-emerald-200 font-medium">✅ হাজিরা বোনাস চালু আছে</span>
+                    </div>
+                    <div class="text-right">
+                        <span id="sumExtraMoney" class="text-2xl font-bold text-amber-300">৳ ০</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 1-Tap Quick Entry Card -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                        প্রতিদিনের কাজ এন্ট্রি করুন
+                    </h3>
+                    <span id="selectedDateBn" class="text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950 px-2.5 py-1 rounded-lg border border-emerald-200 dark:border-emerald-800">
+                        আজ
+                    </span>
+                </div>
+
+                <!-- Date Picker with Prev/Next Day Arrows & Today Button -->
+                <div class="flex items-center gap-1.5">
+                    <button type="button" onclick="shiftSelectedDate(-1)" class="tap-btn p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700" title="আগের দিন">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7"></path></svg>
+                    </button>
+                    <button type="button" onclick="setQuickDate(0)" id="btnToday" class="tap-btn px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-xs shrink-0">
+                        আজ
+                    </button>
+                    <div class="relative flex-1">
+                        <input type="date" id="entryDateInput" onchange="onDateInputChange()" class="w-full px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs font-bold text-slate-800 dark:text-slate-100 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <button type="button" onclick="shiftSelectedDate(1)" class="tap-btn p-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700" title="পরের দিন">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7"></path></svg>
+                    </button>
+                </div>
+
+                <!-- Current Day Preview Banner -->
+                <div id="selectedDayStatus" class="bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl p-3 flex items-center justify-between">
+                    <div class="min-w-0 pr-2">
+                        <p class="text-[11px] text-slate-500 dark:text-slate-400">নির্বাচিত তারিখের বর্তমান অবস্থা:</p>
+                        <p id="selectedDaySummaryText" class="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5 truncate">কোনো এন্ট্রি নেই</p>
+                    </div>
+                    <button id="btnClearDay" onclick="clearSelectedDateEntry()" class="hidden tap-btn shrink-0 text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 hover:bg-rose-100 px-2.5 py-1.5 rounded-lg border border-rose-200 dark:border-rose-800">
+                        মুছুন
+                    </button>
+                </div>
+
+                <!-- 1-Tap Overtime Buttons Grid (+2, +3, +4, +6) -->
+                <div>
+                    <div class="flex items-center justify-between mb-2">
+                        <label class="text-xs font-bold text-slate-600 dark:text-slate-300">১ ক্লিকে ওভারটাইম (OT) যোগ করুন:</label>
+                        <span class="text-[11px] text-slate-400">চাপলেই সেভ হবে</span>
+                    </div>
+                    <div class="grid grid-cols-4 gap-2">
+                        <button type="button" onclick="addOtHours(2)" class="tap-btn flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm">
+                            <span class="text-base font-bold">+২ ঘণ্টা</span>
+                            <span class="text-[10px] text-emerald-100">OT</span>
+                        </button>
+                        <button type="button" onclick="addOtHours(3)" class="tap-btn flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 hover:bg-emerald-100 text-emerald-800 dark:text-emerald-200 border-2 border-emerald-300 dark:border-emerald-700">
+                            <span class="text-base font-bold">+৩ ঘণ্টা</span>
+                            <span class="text-[10px] text-emerald-600 dark:text-emerald-400">OT</span>
+                        </button>
+                        <button type="button" onclick="addOtHours(4)" class="tap-btn flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-teal-50 dark:bg-teal-950/60 hover:bg-teal-100 text-teal-800 dark:text-teal-200 border-2 border-teal-300 dark:border-teal-700">
+                            <span class="text-base font-bold">+৪ ঘণ্টা</span>
+                            <span class="text-[10px] text-teal-600 dark:text-teal-400">OT</span>
+                        </button>
+                        <button type="button" onclick="addOtHours(6)" class="tap-btn flex flex-col items-center justify-center py-3 px-1 rounded-xl bg-cyan-50 dark:bg-cyan-950/60 hover:bg-cyan-100 text-cyan-800 dark:text-cyan-200 border-2 border-cyan-300 dark:border-cyan-700">
+                            <span class="text-base font-bold">+৬ ঘণ্টা</span>
+                            <span class="text-[10px] text-cyan-600 dark:text-cyan-400">OT</span>
+                        </button>
+                    </div>
+
+                    <!-- Custom +1 / -1 Stepper -->
+                    <div class="mt-2.5 flex items-center justify-between bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2">
+                        <span class="text-xs font-bold text-slate-600 dark:text-slate-300">কম/বেশি ঘণ্টা ঠিক করুন:</span>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="adjustSelectedOt(-1)" class="tap-btn px-3 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold text-xs text-rose-600 dark:text-rose-300">-১ ঘণ্টা</button>
+                            <button type="button" onclick="adjustSelectedOt(1)" class="tap-btn px-3 h-8 rounded-lg bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 font-bold text-xs text-emerald-700 dark:text-emerald-300">+১ ঘণ্টা</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 1-Tap Duty & Allowance Toggles (Night, Holiday, Tiffin, Absent) -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-2">অন্যান্য ডিউটি বা ছুটি থাকলে চাপ দিন:</label>
+                    <div class="grid grid-cols-2 gap-2.5">
+                        <button type="button" id="btnToggleNight" onclick="toggleDuty('night')" class="tap-btn flex items-center gap-2.5 py-3 px-3 rounded-xl border-2 border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-bold text-sm">
+                            <span class="text-xl">🌙</span>
+                            <div class="text-left">
+                                <span class="block leading-tight">নাইট ডিউটি</span>
+                                <span id="nightToggleSub" class="text-[11px] font-normal opacity-80">যোগ করতে চাপুন</span>
+                            </div>
+                        </button>
+
+                        <button type="button" id="btnToggleHoliday" onclick="toggleDuty('holiday')" class="tap-btn flex items-center gap-2.5 py-3 px-3 rounded-xl border-2 border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/70 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200 font-bold text-sm">
+                            <span class="text-xl">📅</span>
+                            <div class="text-left">
+                                <span class="block leading-tight">হলিডে ডিউটি</span>
+                                <span id="holidayToggleSub" class="text-[11px] font-normal opacity-80">শুক্রবার / ছুটি</span>
+                            </div>
+                        </button>
+
+                        <button type="button" id="btnToggleTiffin" onclick="toggleDuty('tiffin')" class="tap-btn flex items-center gap-2.5 py-3 px-3 rounded-xl border-2 border-lime-200 dark:border-lime-800/60 bg-lime-50/70 dark:bg-lime-950/30 text-lime-900 dark:text-lime-200 font-bold text-sm">
+                            <span class="text-xl">🍱</span>
+                            <div class="text-left">
+                                <span class="block leading-tight">টিফিন বিল</span>
+                                <span id="tiffinToggleSub" class="text-[11px] font-normal opacity-80">টিফিন পেলে চাপুন</span>
+                            </div>
+                        </button>
+
+                        <button type="button" id="btnToggleAbsent" onclick="toggleDuty('absent')" class="tap-btn flex items-center gap-2.5 py-3 px-3 rounded-xl border-2 border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200 font-bold text-sm">
+                            <span class="text-xl">🚫</span>
+                            <div class="text-left">
+                                <span class="block leading-tight">অনুপস্থিত / ছুটি</span>
+                                <span id="absentToggleSub" class="text-[11px] font-normal opacity-80">কাজে না গেলে</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Optional Note Chips -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 dark:text-slate-300 mb-1.5">কাজের নোট (ঐচ্ছিক):</label>
+                    <div class="flex flex-wrap gap-1.5">
+                        <button type="button" onclick="setNoteChip('সাধারণ')" class="note-chip tap-btn px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">সাধারণ</button>
+                        <button type="button" onclick="setNoteChip('শিপমেন্ট')" class="note-chip tap-btn px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">🚢 শিপমেন্ট</button>
+                        <button type="button" onclick="setNoteChip('বায়ার ভিজিট')" class="note-chip tap-btn px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">👔 বায়ার ভিজিট</button>
+                        <button type="button" onclick="setNoteChip('আর্জেন্ট অর্ডার')" class="note-chip tap-btn px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">⚡ আর্জেন্ট</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Logs Preview -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-white">সাম্প্রতিক এন্ট্রি</h3>
+                    <button onclick="switchTab('history')" class="text-xs font-bold text-emerald-700 dark:text-emerald-400 hover:underline">সব দেখুন →</button>
+                </div>
+                <div id="recentLogsContainer" class="space-y-2.5"></div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- TAB 2: CALENDAR VIEW & FULL MONTHLY HISTORY LOG           -->
+        <!-- ========================================================= -->
+        <section id="tab-history" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 dark:text-white">হাজিরা খাতা ও ক্যালেন্ডার</h3>
+                        <p id="historyMonthSubtitle" class="text-xs text-slate-500 dark:text-slate-400">নভেম্বর ২০২৬</p>
+                    </div>
+                    <!-- Toggle Calendar vs List -->
+                    <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                        <button id="btnViewCal" onclick="setHistorySubView('calendar')" class="px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-2xs">ক্যালেন্ডার</button>
+                        <button id="btnViewList" onclick="setHistorySubView('list')" class="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400">তালিকা</button>
+                    </div>
+                </div>
+
+                <!-- Visual Monthly Calendar Grid -->
+                <div id="calendarViewBox" class="space-y-2">
+                    <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500 dark:text-slate-400 pb-1">
+                        <span>রবি</span><span>সোম</span><span>মঙ্গল</span><span>বুধ</span><span>বৃহ</span><span class="text-indigo-600 dark:text-indigo-400">শুক্র</span><span>শনি</span>
+                    </div>
+                    <div id="calendarGrid" class="grid grid-cols-7 gap-1.5">
+                        <!-- Populated via JS -->
+                    </div>
+                    <!-- Legend -->
+                    <div class="flex flex-wrap items-center justify-center gap-3 pt-2 text-[11px] text-slate-600 dark:text-slate-400 border-t border-slate-100 dark:border-slate-800">
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> ওভারটাইম</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> নাইট</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-indigo-500"></span> হলিডে</span>
+                        <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> অনুপস্থিত</span>
+                    </div>
+                    <p class="text-[11px] text-center text-slate-400">যেকোনো তারিখে চাপ দিলে এডিট করতে পারবেন</p>
+                </div>
+
+                <!-- Detailed List View -->
+                <div id="listViewBox" class="hidden space-y-2.5">
+                    <div id="fullLogsContainer" class="space-y-2.5"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- TAB 3: COMPLETE PAYSLIP & WHATSAPP SHARE                  -->
+        <!-- ========================================================= -->
+        <section id="tab-payslip" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center justify-between">
+                    <div>
+                        <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">সম্ভাব্য পে-স্লিপ</span>
+                        <h3 id="payslipTitle" class="text-lg font-bold text-slate-800 dark:text-white">নভেম্বর ২০২৬-এর বেতন হিসাব</h3>
+                    </div>
+                    <div class="w-10 h-10 rounded-full bg-emerald-50 dark:bg-emerald-950 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold text-lg">
+                        ৳
+                    </div>
+                </div>
+
+                <!-- Attendance Bonus Alert Banner -->
+                <div id="payslipBonusAlert" class="rounded-xl p-3 text-xs font-semibold flex items-center gap-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800">
+                    <span class="text-base">✅</span>
+                    <span>এই মাসে কোনো অনুপস্থিতি নেই! পূর্ণ হাজিরা বোনাস পাবেন।</span>
+                </div>
+
+                <!-- Line-by-Line Payslip Breakdown -->
+                <div class="space-y-2.5 text-sm">
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-600 dark:text-slate-400">মূল গ্রস বেতন (Gross Salary)</span>
+                        <span id="slipGross" class="font-bold text-slate-800 dark:text-slate-100">৳ ১২,৫০০</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400 block">ওভারটাইম বিল (OT)</span>
+                            <span id="slipOtFormula" class="text-[11px] text-slate-400">০ ঘণ্টা × ৳ ৭৬.৯২</span>
+                        </div>
+                        <span id="slipOtBill" class="font-bold text-emerald-700 dark:text-emerald-400">+ ৳ ০</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400 block">নাইট ডিউটি বিল</span>
+                            <span id="slipNightFormula" class="text-[11px] text-slate-400">০ টি × ৳ ১০০</span>
+                        </div>
+                        <span id="slipNightBill" class="font-bold text-amber-700 dark:text-amber-400">+ ৳ ০</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400 block">হলিডে ডিউটি বিল</span>
+                            <span id="slipHolidayFormula" class="text-[11px] text-slate-400">০ টি × ৳ ৩০০</span>
+                        </div>
+                        <span id="slipHolidayBill" class="font-bold text-indigo-700 dark:text-indigo-400">+ ৳ ০</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400 block">টিফিন বিল</span>
+                            <span id="slipTiffinFormula" class="text-[11px] text-slate-400">০ টি × ৳ ৪০</span>
+                        </div>
+                        <span id="slipTiffinBill" class="font-bold text-lime-700 dark:text-lime-400">+ ৳ ০</span>
+                    </div>
+                    <div class="flex justify-between items-center py-1.5 border-b border-slate-100 dark:border-slate-800">
+                        <span class="text-slate-600 dark:text-slate-400">হাজিরা বোনাস (Attendance Bonus)</span>
+                        <span id="slipBonusBill" class="font-bold text-emerald-700 dark:text-emerald-400">+ ৳ ৮০০</span>
+                    </div>
+                </div>
+
+                <!-- Grand Total Box -->
+                <div class="bg-emerald-600 dark:bg-emerald-800 text-white rounded-2xl p-4 flex items-center justify-between shadow-md">
+                    <div>
+                        <span class="text-xs text-emerald-100 block">সর্বমোট সম্ভাব্য বেতন ও বিল</span>
+                        <span class="text-[11px] text-emerald-200">(গ্রস + সব ভাতা ও ওভারটাইম)</span>
+                    </div>
+                    <span id="slipGrandTotal" class="text-2xl font-bold text-amber-300">৳ ১৩,৩০০</span>
+                </div>
+
+                <!-- Share Buttons -->
+                <div class="grid grid-cols-1 gap-2.5 pt-1">
+                    <button type="button" onclick="shareToWhatsApp()" class="tap-btn w-full py-3.5 px-4 rounded-xl bg-[#25D366] hover:bg-[#20bd5a] text-white font-bold text-sm shadow-sm flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5 fill-current" viewBox="0 0 24 24"><path d="M12.031 6.172c-3.181 0-5.767 2.586-5.768 5.766-.001 1.298.38 2.27 1.019 3.287l-.582 2.128 2.182-.573c.978.58 1.911.928 3.145.929 3.178 0 5.767-2.587 5.768-5.766.001-3.187-2.575-5.77-5.764-5.771zm3.392 8.244c-.144.405-.837.774-1.17.824-.299.045-.677.063-1.092-.069-.252-.08-.575-.187-.988-.365-1.739-.751-2.874-2.502-2.961-2.617-.087-.116-.708-.94-.708-1.793s.448-1.273.607-1.446c.159-.173.346-.217.462-.217l.332.006c.106.005.249-.04.39.298.144.347.491 1.2.534 1.287.043.087.072.188.014.304-.058.116-.087.188-.173.289l-.26.304c-.087.086-.177.18-.076.354.101.174.449.741.964 1.201.662.591 1.221.774 1.394.86s.274.072.376-.043c.101-.116.433-.506.549-.68.116-.173.231-.145.39-.087s1.011.477 1.184.564.289.13.332.202c.045.072.045.419-.1.824z"/></svg>
+                        হোয়াটসঅ্যাপে হিসাব পাঠান
+                    </button>
+                    <button type="button" onclick="copySummaryToClipboard()" class="tap-btn w-full py-3 px-4 rounded-xl bg-slate-800 dark:bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-2">
+                        <span>📋</span> সম্পূর্ণ হিসাব কপি করুন
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ========================================================= -->
+        <!-- TAB 4: SETTINGS & BACKUP / RESTORE                        -->
+        <!-- ========================================================= -->
+        <section id="tab-settings" class="hidden space-y-4">
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-4">
+                <div class="border-b border-slate-100 dark:border-slate-800 pb-2.5">
+                    <h3 class="text-lg font-bold text-slate-800 dark:text-white">প্রোফাইল ও বেতন সেটিংস</h3>
+                    <p class="text-xs text-slate-500 dark:text-slate-400">বেসিক বেতন দিলে প্রতি ঘণ্টার OT রেট অটোমেটিক বের হবে</p>
+                </div>
+
+                <!-- Worker Profile -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">আপনার নাম</label>
+                        <input type="text" id="setWorkerName" placeholder="যেমন: সুমাইয়া আক্তার" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">আইডি কার্ড নং</label>
+                        <input type="text" id="setWorkerId" placeholder="যেমন: ২০২৪" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-emerald-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">পদবি ও লাইন নং (ঐচ্ছিক)</label>
+                    <input type="text" id="setDesignation" placeholder="যেমন: সুইং অপারেটর, লাইন-০৪" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:outline-none focus:border-emerald-500">
+                </div>
+
+                <!-- Gross & Basic Salary -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">মূল গ্রস বেতন (Gross)</label>
+                        <input type="number" id="setGrossSalary" placeholder="১২৫০০" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">বেসিক বেতন (Basic)</label>
+                        <input type="number" id="setBasicSalary" oninput="autoCalcRatesFromBasic()" placeholder="৮০০০" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold text-emerald-700 dark:text-emerald-400">
+                    </div>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400 -mt-2">শ্রম আইন অনুযায়ী: (Basic ÷ ২০৮) × ২ = প্রতি ঘণ্টা OT রেট</p>
+
+                <!-- Rates Grid -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">OT রেট (প্রতি ঘণ্টা)</label>
+                        <input type="number" step="0.01" id="setOtRate" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-emerald-50/50 dark:bg-emerald-950/40 text-sm font-bold text-emerald-700 dark:text-emerald-300">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">হাজিরা বোনাস (মাসিক)</label>
+                        <input type="number" id="setAttendanceBonus" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">নাইট বিল (প্রতি রাত)</label>
+                        <input type="number" id="setNightRate" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">হলিডে বিল (প্রতি দিন)</label>
+                        <input type="number" id="setHolidayRate" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">টিফিন বিল (প্রতি দিন)</label>
+                        <input type="number" id="setTiffinRate" class="w-full px-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm font-bold">
+                    </div>
+                </div>
+
+                <!-- Auto Tiffin Rule Toggle -->
+                <label class="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-800/70 p-3 rounded-xl border border-slate-200 dark:border-slate-700 cursor-pointer">
+                    <input type="checkbox" id="setAutoTiffin" class="w-4 h-4 accent-emerald-600 rounded">
+                    <span class="text-xs font-semibold text-slate-700 dark:text-slate-300">২ ঘণ্টা বা তার বেশি OT হলে অটোমেটিক টিফিন যোগ হবে</span>
+                </label>
+
+                <button type="button" onclick="saveSettings()" class="tap-btn w-full py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-base shadow-md">
+                    সেটিংস সেভ করুন
+                </button>
+            </div>
+
+            <!-- Backup & Restore Card -->
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <h3 class="text-base font-bold text-slate-800 dark:text-white">ডাটা ব্যাকআপ ও রিস্টোর</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">ফোন পরিবর্তন করলে বা অ্যাপ আপডেট করলে আগের হিসাব ফিরিয়ে আনতে ব্যাকআপ ফাইল ব্যবহার করুন।</p>
+                
+                <div class="grid grid-cols-2 gap-2.5">
+                    <button type="button" onclick="exportJsonBackup()" class="tap-btn py-3 px-3 rounded-xl bg-slate-800 text-white text-xs font-bold flex items-center justify-center gap-1.5">
+                        <span>💾</span> ব্যাকআপ নিন
+                    </button>
+                    <label class="tap-btn py-3 px-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer">
+                        <span>📂</span> রিস্টোর করুন
+                        <input type="file" accept=".json" onchange="importJsonBackup(event)" class="hidden">
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <h3 class="text-base font-bold text-slate-800 dark:text-white">মাসিক রিপোর্ট</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">নির্বাচিত মাসের হিসাব Excel-এ খোলার উপযোগী CSV ফাইলে নিন।</p>
+                <button type="button" onclick="exportMonthlyCsv()" class="tap-btn w-full py-3 rounded-xl bg-sky-700 text-white text-sm font-bold">📊 মাসিক CSV রিপোর্ট ডাউনলোড</button>
+            </div>
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <h3 class="text-base font-bold text-slate-800 dark:text-white">🔐 অ্যাপ PIN লক</h3>
+                <p class="text-xs text-slate-500 dark:text-slate-400">অন্য কেউ ফোন হাতে নিলে অ্যাপ খুলতে PIN লাগবে। ৪–৮ সংখ্যার PIN দিন।</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <input type="password" id="setPin" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="নতুন PIN" class="min-w-0 w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-base">
+                    <input type="password" id="confirmPin" inputmode="numeric" autocomplete="new-password" maxlength="8" placeholder="PIN আবার দিন" class="min-w-0 w-full px-3 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-base">
+                </div>
+                <button type="button" onclick="savePinLock()" class="tap-btn w-full py-3 rounded-xl bg-emerald-600 text-white font-bold">PIN চালু / পরিবর্তন করুন</button>
+                <div class="grid grid-cols-2 gap-2">
+                    <button type="button" onclick="removePinLock()" class="tap-btn py-3 rounded-xl bg-slate-100 dark:bg-slate-800 text-xs font-bold">PIN বন্ধ করুন</button>
+                    <button type="button" onclick="lockApp()" class="tap-btn py-3 rounded-xl bg-amber-100 dark:bg-amber-950 text-xs font-bold">এখনই লক করুন</button>
+                </div>
+                <p class="text-[11px] text-amber-700 dark:text-amber-300">PIN লক অতিরিক্ত গোপনীয়তা দেয়; browser storage-এর ডাটা encrypt করে না।</p>
+            </div>
+            <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 shadow-sm border border-slate-200 dark:border-slate-800 space-y-3">
+                <div class="flex items-center justify-between gap-2">
+                    <h3 class="text-base font-bold text-slate-800 dark:text-white">❤️ অ্যাপটি ভালো লাগলে সহায়তা করুন</h3>
+                    <span class="text-[10px] font-bold px-2 py-1 rounded-full bg-emerald-100 text-emerald-800">ঐচ্ছিক</span>
+                </div>
+                <p class="text-sm text-slate-600 dark:text-slate-300">অ্যাপটি উপকারে এলে নিজের ইচ্ছায় অনুদান দিতে পারেন। কোনো পেমেন্ট বাধ্যতামূলক নয়; অনুদান না দিলেও সব ফিচার ব্যবহার করতে পারবেন।</p>
+                <div class="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40 p-3">
+                    <p class="text-xs font-semibold text-emerald-800 dark:text-emerald-200">বাংলাদেশের MFS নম্বর</p>
+                    <p class="text-xl font-bold tracking-wider text-slate-900 dark:text-white mt-1">01402047272</p>
+                    <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">bKash • Nagad • Rocket • Upay</p>
+                    <button type="button" onclick="copyDonationNumber()" class="tap-btn w-full mt-3 py-3 rounded-xl bg-emerald-600 text-white font-bold">নম্বর কপি করুন</button>
+                </div>
+                <p class="text-[11px] text-slate-500 dark:text-slate-400">পেমেন্টের আগে অ্যাপে নম্বর ও প্রাপকের পরিচয় মিলিয়ে নিন। এই অ্যাপ পেমেন্ট যাচাই করে না।</p>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (4 Native Android Tabs) -->
+    <nav class="fixed bottom-0 inset-x-0 z-30 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_12px_rgba(0,0,0,0.05)]">
+        <div class="max-w-lg mx-auto grid grid-cols-4 h-16">
+            <button onclick="switchTab('home')" id="nav-home" class="tap-btn flex flex-col items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                <span class="text-[11px]">হোম এন্ট্রি</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="tap-btn flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 font-medium">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                <span class="text-[11px]">ক্যালেন্ডার</span>
+            </button>
+            <button onclick="switchTab('payslip')" id="nav-payslip" class="tap-btn flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 font-medium">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"></path></svg>
+                <span class="text-[11px]">বেতন হিসাব</span>
+            </button>
+            <button onclick="switchTab('settings')" id="nav-settings" class="tap-btn flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 font-medium">
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                <span class="text-[11px]">সেটিংস</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 z-50 hidden bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl max-w-xs w-full p-5 shadow-xl space-y-4 border border-slate-200 dark:border-slate-800">
+            <h4 class="text-base font-bold text-slate-800 dark:text-white" id="confirmTitle">নিশ্চিত করুন</h4>
+            <p class="text-sm text-slate-600 dark:text-slate-300" id="confirmMessage">আপনি কি এই দিনের হিসাব মুছে ফেলতে চান?</p>
+            <div class="flex gap-2.5 pt-1">
+                <button onclick="closeConfirmModal()" class="tap-btn flex-1 py-2.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold text-sm">না, থাক</button>
+                <button id="confirmYesBtn" class="tap-btn flex-1 py-2.5 rounded-xl bg-rose-600 text-white font-bold text-sm">হ্যাঁ, মুছুন</button>
+            </div>
+        </div>
+    </div>
+
+
+    <div id="pinLockOverlay" class="fixed inset-0 z-[70] hidden bg-slate-950/95 flex items-center justify-center p-5">
+        <div class="w-full max-w-sm rounded-2xl bg-white dark:bg-slate-900 p-6 shadow-2xl space-y-4 text-center">
+            <div class="text-4xl">🔒</div>
+            <h2 class="text-xl font-bold text-slate-900 dark:text-white">অ্যাপ লক করা আছে</h2>
+            <p class="text-sm text-slate-500 dark:text-slate-400">চালিয়ে যেতে আপনার PIN লিখুন</p>
+            <input id="unlockPinInput" type="password" inputmode="numeric" autocomplete="current-password" maxlength="8" placeholder="আপনার PIN" class="w-full text-center text-2xl tracking-widest px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800">
+            <p id="pinError" class="hidden text-sm text-rose-600" role="alert">PIN সঠিক নয়। আবার চেষ্টা করুন।</p>
+            <button type="button" onclick="unlockApp()" class="tap-btn w-full py-3 rounded-xl bg-emerald-600 text-white font-bold">আনলক করুন</button>
+        </div>
+    </div>
+    <!-- Toast Notification Banner -->
+    <div id="toastBanner" class="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 hidden bg-slate-900 dark:bg-emerald-950 text-white text-sm font-semibold px-5 py-3 rounded-full shadow-lg border border-white/10 flex items-center gap-2 whitespace-nowrap">
+        <span class="text-emerald-400">✔</span>
+        <span id="toastMessage">হিসাব সেভ হয়েছে!</span>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. BENGALI LOCALIZATION & HELPERS
+        // ==========================================
+        const BN_DIGITS = ['০', '১', '২', '৩', '৪', '৫', '৬', '৭', '৮', '৯'];
+        const BN_MONTHS = [
+            'জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন',
+            'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'
+        ];
+        const BN_DAYS = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, function(char) {
+                return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char];
+            });
+        }
+
+        function toBnNum(num) {
+            if (num === null || num === undefined) return '০';
+            return String(num).replace(/\d/g, d => BN_DIGITS[d]);
+        }
+
+        function formatDateStr(dateObj) {
+            const y = dateObj.getFullYear();
+            const m = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dateObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function parseLocalDate(dateStr) {
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d);
+        }
+
+        function triggerHaptic() {
+            if (navigator.vibrate) {
+                try { navigator.vibrate(25); } catch (e) {}
+            }
+        }
+
+        // ==========================================
+        // 2. APP STATE & LOCAL STORAGE
+        // ==========================================
+        const STORAGE_KEY_LOGS = 'garments_ot_logs_v2';
+        const STORAGE_KEY_SETTINGS = 'garments_ot_settings_v2';
+
+        let appSettings = {
+            workerName: '',
+            workerId: '',
+            designation: '',
+            grossSalary: 12500,
+            basicSalary: 8000,
+            otRate: 76.92,
+            attendanceBonus: 800,
+            nightRate: 100,
+            holidayRate: 300,
+            tiffinRate: 40,
+            autoTiffin: true,
+            darkMode: false
+        };
+
+        // Logs: { "2026-11-21": { ot: 2, night: false, holiday: false, tiffin: true, absent: false, note: "" } }
+        let attendanceLogs = {};
+        let activeMonthDate = new Date();
+        let selectedDateStr = formatDateStr(new Date());
+        let historySubView = 'calendar';
+
+        function loadAppData() {
+            try {
+                // Migrate v1 data if v2 does not exist yet
+                const savedSettings = localStorage.getItem(STORAGE_KEY_SETTINGS) || localStorage.getItem('garments_ot_settings_v1');
+                if (savedSettings) {
+                    appSettings = { ...appSettings, ...JSON.parse(savedSettings) };
+                }
+                const savedLogs = localStorage.getItem(STORAGE_KEY_LOGS) || localStorage.getItem('garments_ot_logs_v1');
+                if (savedLogs) {
+                    attendanceLogs = JSON.parse(savedLogs);
+                }
+            } catch (e) {
+                console.error('Storage read error:', e);
+            }
+            applyTheme();
+        }
+
+        function persistLogs() {
+            try {
+                localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(attendanceLogs));
+            } catch (e) {
+                showToast('মেমোরিতে সেভ করতে সমস্যা হয়েছে!');
+            }
+        }
+
+        function persistSettings() {
+            try {
+                localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(appSettings));
+            } catch (e) {
+                showToast('সেটিংস সেভ করতে সমস্যা হয়েছে!');
+            }
+        }
+
+        function toggleDarkMode() {
+            appSettings.darkMode = !appSettings.darkMode;
+            persistSettings();
+            applyTheme();
+            triggerHaptic();
+        }
+
+        function applyTheme() {
+            const html = document.documentElement;
+            const sun = document.getElementById('iconSun');
+            const moon = document.getElementById('iconMoon');
+            if (appSettings.darkMode) {
+                html.classList.add('dark');
+                sun.classList.remove('hidden');
+                moon.classList.add('hidden');
+            } else {
+                html.classList.remove('dark');
+                sun.classList.add('hidden');
+                moon.classList.remove('hidden');
+            }
+        }
+
+        // ==========================================
+        // 3. DAILY ENTRY ACTIONS
+        // ==========================================
+        function getEntry(dateStr) {
+            return attendanceLogs[dateStr] || { ot: 0, night: false, holiday: false, tiffin: false, absent: false, note: '' };
+        }
+
+        function saveEntry(dateStr, entry) {
+            const isEmpty = (!entry.ot || entry.ot <= 0) && !entry.night && !entry.holiday && !entry.tiffin && !entry.absent && !entry.note;
+            if (isEmpty) {
+                delete attendanceLogs[dateStr];
+            } else {
+                attendanceLogs[dateStr] = {
+                    ot: Math.max(0, Number(entry.ot) || 0),
+                    night: Boolean(entry.night),
+                    holiday: Boolean(entry.holiday),
+                    tiffin: Boolean(entry.tiffin),
+                    absent: Boolean(entry.absent),
+                    note: entry.note || ''
+                };
+            }
+            persistLogs();
+            const editedDate = parseLocalDate(dateStr);
+            activeMonthDate = new Date(editedDate.getFullYear(), editedDate.getMonth(), 1);
+            triggerHaptic();
+            renderAll();
+        }
+
+        function addOtHours(hours) {
+            const current = getEntry(selectedDateStr);
+            const updatedOt = Math.round((current.ot + hours) * 10) / 10;
+            const autoTiffinTriggered = appSettings.autoTiffin && updatedOt >= 2 ? true : current.tiffin;
+            saveEntry(selectedDateStr, {
+                ...current,
+                ot: updatedOt,
+                absent: false,
+                tiffin: autoTiffinTriggered
+            });
+            showToast(`+${toBnNum(hours)} ঘণ্টা ওভারটাইম সেভ হয়েছে!`);
+        }
+
+        function adjustSelectedOt(delta) {
+            const current = getEntry(selectedDateStr);
+            const updatedOt = Math.max(0, Math.round((current.ot + delta) * 10) / 10);
+            saveEntry(selectedDateStr, { ...current, ot: updatedOt });
+            showToast(`OT: ${toBnNum(updatedOt)} ঘণ্টা`);
+        }
+
+        function toggleDuty(type) {
+            const current = getEntry(selectedDateStr);
+            if (type === 'night') {
+                current.night = !current.night;
+                if (current.night) current.absent = false;
+                saveEntry(selectedDateStr, current);
+                showToast(current.night ? '🌙 নাইট ডিউটি যোগ হয়েছে' : 'নাইট ডিউটি বাতিল');
+            } else if (type === 'holiday') {
+                current.holiday = !current.holiday;
+                if (current.holiday) current.absent = false;
+                saveEntry(selectedDateStr, current);
+                showToast(current.holiday ? '📅 হলিডে ডিউটি যোগ হয়েছে' : 'হলিডে ডিউটি বাতিল');
+            } else if (type === 'tiffin') {
+                current.tiffin = !current.tiffin;
+                if (current.tiffin) current.absent = false;
+                saveEntry(selectedDateStr, current);
+                showToast(current.tiffin ? '🍱 টিফিন বিল যোগ হয়েছে' : 'টিফিন বিল বাতিল');
+            } else if (type === 'absent') {
+                current.absent = !current.absent;
+                if (current.absent) {
+                    current.ot = 0;
+                    current.night = false;
+                    current.holiday = false;
+                    current.tiffin = false;
+                }
+                saveEntry(selectedDateStr, current);
+                showToast(current.absent ? '⚠️ অনুপস্থিতি যুক্ত হয়েছে (হাজিরা বোনাস কাটা যেতে পারে)' : 'অনুপস্থিতি বাতিল করা হয়েছে');
+            }
+        }
+
+        function setNoteChip(noteText) {
+            const current = getEntry(selectedDateStr);
+            current.note = current.note === noteText ? '' : noteText;
+            saveEntry(selectedDateStr, current);
+            showToast(current.note ? `নোট যুক্ত: ${current.note}` : 'নোট সরানো হয়েছে');
+        }
+
+        function clearSelectedDateEntry() {
+            openConfirmModal(
+                'হিসাব মুছে ফেলুন',
+                'আপনি কি এই তারিখের সব এন্ট্রি মুছে ফেলতে চান?',
+                () => {
+                    delete attendanceLogs[selectedDateStr];
+                    persistLogs();
+                    renderAll();
+                    showToast('তারিখের হিসাব মুছে ফেলা হয়েছে');
+                }
+            );
+        }
+
+        function deleteLogByDate(dateStr) {
+            const dObj = parseLocalDate(dateStr);
+            const label = `${toBnNum(dObj.getDate())} ${BN_MONTHS[dObj.getMonth()]}`;
+            openConfirmModal(
+                `${label}-এর হিসাব মুছুন`,
+                'আপনি কি নিশ্চিতভাবে এই দিনের এন্ট্রি ডিলিট করতে চান?',
+                () => {
+                    delete attendanceLogs[dateStr];
+                    persistLogs();
+                    renderAll();
+                    showToast('এন্ট্রি মুছে ফেলা হয়েছে');
+                }
+            );
+        }
+
+        function editDateFromCalendar(dateStr) {
+            selectedDateStr = dateStr;
+            document.getElementById('entryDateInput').value = selectedDateStr;
+            switchTab('home');
+            showToast('তারিখ নির্বাচন করা হয়েছে');
+        }
+
+        // ==========================================
+        // 4. DATE NAVIGATION
+        // ==========================================
+        function setQuickDate(offsetDays) {
+            const d = new Date();
+            d.setDate(d.getDate() + offsetDays);
+            selectedDateStr = formatDateStr(d);
+            document.getElementById('entryDateInput').value = selectedDateStr;
+            renderSelectedDayPanel();
+        }
+
+        function shiftSelectedDate(deltaDays) {
+            const d = parseLocalDate(selectedDateStr);
+            d.setDate(d.getDate() + deltaDays);
+            selectedDateStr = formatDateStr(d);
+            document.getElementById('entryDateInput').value = selectedDateStr;
+            activeMonthDate = new Date(d.getFullYear(), d.getMonth(), 1);
+            renderAll();
+        }
+
+        function onDateInputChange() {
+            const val = document.getElementById('entryDateInput').value;
+            if (val) {
+                selectedDateStr = val;
+                const d = parseLocalDate(val);
+                activeMonthDate = new Date(d.getFullYear(), d.getMonth(), 1);
+                renderAll();
+            }
+        }
+
+        function changeMonth(delta) {
+            activeMonthDate = new Date(activeMonthDate.getFullYear(), activeMonthDate.getMonth() + delta, 1);
+            renderAll();
+        }
+
+        // ==========================================
+        // 5. CALCULATIONS & RENDERING
+        // ==========================================
+        function getMonthlyStats(year, monthIndex) {
+            const prefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}-`;
+            let totalOt = 0;
+            let totalNight = 0;
+            let totalHoliday = 0;
+            let totalTiffin = 0;
+            let totalAbsent = 0;
+            const entries = [];
+
+            Object.keys(attendanceLogs)
+                .filter(dateKey => dateKey.startsWith(prefix))
+                .sort((a, b) => b.localeCompare(a))
+                .forEach(dateKey => {
+                    const item = attendanceLogs[dateKey];
+                    totalOt += item.ot || 0;
+                    if (item.night) totalNight += 1;
+                    if (item.holiday) totalHoliday += 1;
+                    if (item.tiffin) totalTiffin += 1;
+                    if (item.absent) totalAbsent += 1;
+
+                    const dayBill = Math.round(
+                        ((item.ot || 0) * appSettings.otRate) +
+                        (item.night ? appSettings.nightRate : 0) +
+                        (item.holiday ? appSettings.holidayRate : 0) +
+                        (item.tiffin ? appSettings.tiffinRate : 0)
+                    );
+
+                    entries.push({ dateStr: dateKey, ...item, dayBill });
+                });
+
+            totalOt = Math.round(totalOt * 10) / 10;
+            const otBill = Math.round(totalOt * appSettings.otRate);
+            const nightBill = Math.round(totalNight * appSettings.nightRate);
+            const holidayBill = Math.round(totalHoliday * appSettings.holidayRate);
+            const tiffinBill = Math.round(totalTiffin * appSettings.tiffinRate);
+            const extraMoney = otBill + nightBill + holidayBill + tiffinBill;
+            const bonusEarned = totalAbsent === 0 ? (appSettings.attendanceBonus || 0) : 0;
+            const grandTotal = (appSettings.grossSalary || 0) + extraMoney + bonusEarned;
+
+            return {
+                totalOt, totalNight, totalHoliday, totalTiffin, totalAbsent,
+                otBill, nightBill, holidayBill, tiffinBill, extraMoney, bonusEarned, grandTotal,
+                entries
+            };
+        }
+
+        function renderSelectedDayPanel() {
+            const todayStr = formatDateStr(new Date());
+            const btnToday = document.getElementById('btnToday');
+            btnToday.className = selectedDateStr === todayStr
+                ? 'tap-btn px-3 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-xs shrink-0'
+                : 'tap-btn px-3 py-2.5 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 shrink-0';
+
+            const dObj = parseLocalDate(selectedDateStr);
+            document.getElementById('selectedDateBn').textContent = `${toBnNum(dObj.getDate())} ${BN_MONTHS[dObj.getMonth()]} (${BN_DAYS[dObj.getDay()]})`;
+
+            const entry = getEntry(selectedDateStr);
+            const parts = [];
+            if (entry.absent) {
+                parts.push('🚫 অনুপস্থিত / ছুটি');
+            } else {
+                if (entry.ot > 0) parts.push(`${toBnNum(entry.ot)} ঘণ্টা OT`);
+                if (entry.night) parts.push('🌙 নাইট');
+                if (entry.holiday) parts.push('📅 হলিডে');
+                if (entry.tiffin) parts.push('🍱 টিফিন');
+            }
+            if (entry.note) parts.push(`(${entry.note})`);
+
+            const summaryEl = document.getElementById('selectedDaySummaryText');
+            const clearBtn = document.getElementById('btnClearDay');
+
+            if (parts.length > 0) {
+                summaryEl.textContent = parts.join(' • ');
+                summaryEl.className = entry.absent
+                    ? 'text-sm font-bold text-rose-600 dark:text-rose-400 mt-0.5 truncate'
+                    : 'text-sm font-bold text-emerald-700 dark:text-emerald-400 mt-0.5 truncate';
+                clearBtn.classList.remove('hidden');
+            } else {
+                summaryEl.textContent = 'এখনো কোনো কাজ যোগ করা হয়নি';
+                summaryEl.className = 'text-sm font-medium text-slate-400 mt-0.5 truncate';
+                clearBtn.classList.add('hidden');
+            }
+
+            // Toggle Buttons Visuals
+            updateToggleStyle('btnToggleNight', 'nightToggleSub', entry.night, 'amber', '✔ যুক্ত আছে', 'যোগ করতে চাপুন');
+            updateToggleStyle('btnToggleHoliday', 'holidayToggleSub', entry.holiday, 'indigo', '✔ যুক্ত আছে', 'শুক্রবার / ছুটি');
+            updateToggleStyle('btnToggleTiffin', 'tiffinToggleSub', entry.tiffin, 'lime', '✔ যুক্ত আছে', 'টিফিন পেলে চাপুন');
+            updateToggleStyle('btnToggleAbsent', 'absentToggleSub', entry.absent, 'rose', '✔ অনুপস্থিত', 'কাজে না গেলে');
+
+            // Note Chips highlight
+            document.querySelectorAll('.note-chip').forEach(btn => {
+                const label = btn.textContent.replace(/^[^\w\u0980-\u09FF]+/, '').trim();
+                if (entry.note === label) {
+                    btn.className = 'note-chip tap-btn px-3 py-1 rounded-full text-xs font-bold bg-emerald-600 text-white border border-emerald-600';
+                } else {
+                    btn.className = 'note-chip tap-btn px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700';
+                }
+            });
+        }
+
+        function updateToggleStyle(btnId, subId, isActive, color, activeText, inactiveText) {
+            const btn = document.getElementById(btnId);
+            const sub = document.getElementById(subId);
+            const activeMap = {
+                amber: 'border-amber-500 bg-amber-500 text-white shadow-sm',
+                indigo: 'border-indigo-600 bg-indigo-600 text-white shadow-sm',
+                lime: 'border-lime-600 bg-lime-600 text-white shadow-sm',
+                rose: 'border-rose-600 bg-rose-600 text-white shadow-sm'
+            };
+            const inactiveMap = {
+                amber: 'border-amber-200 dark:border-amber-800/60 bg-amber-50/70 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200',
+                indigo: 'border-indigo-200 dark:border-indigo-800/60 bg-indigo-50/70 dark:bg-indigo-950/30 text-indigo-900 dark:text-indigo-200',
+                lime: 'border-lime-200 dark:border-lime-800/60 bg-lime-50/70 dark:bg-lime-950/30 text-lime-900 dark:text-lime-200',
+                rose: 'border-rose-200 dark:border-rose-800/60 bg-rose-50/70 dark:bg-rose-950/30 text-rose-900 dark:text-rose-200'
+            };
+            btn.className = `tap-btn flex items-center gap-2.5 py-3 px-3 rounded-xl border-2 font-bold text-sm ${isActive ? activeMap[color] : inactiveMap[color]}`;
+            sub.textContent = isActive ? activeText : inactiveText;
+        }
+
+        function createLogRowHTML(item) {
+            const dObj = parseLocalDate(item.dateStr);
+            const dayNum = toBnNum(dObj.getDate());
+            const monthShort = BN_MONTHS[dObj.getMonth()];
+            const dayName = BN_DAYS[dObj.getDay()];
+
+            const badges = [];
+            if (item.absent) {
+                badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200">🚫 অনুপস্থিত</span>`);
+            } else {
+                if (item.ot > 0) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200">${toBnNum(item.ot)} ঘণ্টা OT</span>`);
+                if (item.night) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200">🌙 নাইট</span>`);
+                if (item.holiday) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200">📅 হলিডে</span>`);
+                if (item.tiffin) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-lime-100 dark:bg-lime-950 text-lime-800 dark:text-lime-200">🍱 টিফিন</span>`);
+            }
+            if (item.note) {
+                badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">${escapeHtml(item.note)}</span>`);
+            }
+
+            return `
+                <div class="flex items-center justify-between p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200/80 dark:border-slate-700/80">
+                    <div onclick="editDateFromCalendar('${item.dateStr}')" class="flex items-center gap-3 cursor-pointer flex-1 min-w-0">
+                        <div class="w-11 h-11 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center shrink-0">
+                            <span class="text-base font-bold text-slate-800 dark:text-slate-100 leading-none">${dayNum}</span>
+                            <span class="text-[10px] font-semibold text-slate-500 mt-0.5">${monthShort.slice(0, 3)}</span>
+                        </div>
+                        <div class="min-w-0">
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-bold text-slate-700 dark:text-slate-200">${dayName}</span>
+                                <span class="text-xs text-slate-400">•</span>
+                                <span class="text-xs font-bold text-emerald-700 dark:text-emerald-400">৳ ${toBnNum(item.dayBill)}</span>
+                            </div>
+                            <div class="flex flex-wrap gap-1 mt-1">
+                                ${badges.join('')}
+                            </div>
+                        </div>
+                    </div>
+                    <button onclick="deleteLogByDate('${item.dateStr}')" class="tap-btn p-2 text-slate-400 hover:text-rose-600 rounded-lg shrink-0" aria-label="মুছুন">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            `;
+        }
+
+        function renderCalendarGrid(year, monthIndex) {
+            const grid = document.getElementById('calendarGrid');
+            const firstDay = new Date(year, monthIndex, 1).getDay();
+            const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
+            let cellsHtml = '';
+
+            for (let i = 0; i < firstDay; i++) {
+                cellsHtml += `<div class="h-14 rounded-xl bg-slate-50/50 dark:bg-slate-800/20"></div>`;
+            }
+
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateKey = `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const entry = attendanceLogs[dateKey];
+                const isSelected = dateKey === selectedDateStr;
+
+                let dots = '';
+                let otBadge = '';
+                if (entry) {
+                    if (entry.absent) {
+                        dots += `<span class="w-2 h-2 rounded-full bg-rose-500"></span>`;
+                    } else {
+                        if (entry.ot > 0) otBadge = `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 leading-none">${toBnNum(entry.ot)}h</span>`;
+                        if (entry.night) dots += `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`;
+                        if (entry.holiday) dots += `<span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>`;
+                        if (entry.tiffin) dots += `<span class="w-1.5 h-1.5 rounded-full bg-lime-500"></span>`;
+                    }
+                }
+
+                const borderClass = isSelected
+                    ? 'border-2 border-emerald-600 bg-emerald-50/60 dark:bg-emerald-950/50'
+                    : 'border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60';
+
+                cellsHtml += `
+                    <button type="button" onclick="editDateFromCalendar('${dateKey}')" class="tap-btn h-14 rounded-xl ${borderClass} flex flex-col items-center justify-between py-1.5 px-0.5">
+                        <span class="text-xs font-bold text-slate-800 dark:text-slate-200 leading-none">${toBnNum(day)}</span>
+                        ${otBadge}
+                        <div class="flex items-center gap-0.5 h-2">${dots}</div>
+                    </button>
+                `;
+            }
+            grid.innerHTML = cellsHtml;
+        }
+
+        function renderAll() {
+            const year = activeMonthDate.getFullYear();
+            const month = activeMonthDate.getMonth();
+            const monthTitle = `${BN_MONTHS[month]} ${toBnNum(year)}`;
+
+            // Header worker info
+            const headerInfo = document.getElementById('headerWorkerInfo');
+            if (appSettings.workerName || appSettings.workerId) {
+                headerInfo.textContent = `${appSettings.workerName || 'ওয়ার্কার'} ${appSettings.workerId ? `(ID: ${appSettings.workerId})` : ''}`;
+            } else {
+                headerInfo.textContent = 'সহজ ওভারটাইম ও বেতন হিসাব';
+            }
+
+            document.getElementById('currentMonthLabel').textContent = monthTitle;
+            document.getElementById('historyMonthSubtitle').textContent = `${monthTitle}-এর হাজিরা চিত্র`;
+            document.getElementById('payslipTitle').textContent = `${monthTitle}-এর সম্ভাব্য বেতন`;
+
+            const stats = getMonthlyStats(year, month);
+
+            // Home summary banner
+            document.getElementById('sumOtHours').textContent = `${toBnNum(stats.totalOt)} ঘণ্টা`;
+            document.getElementById('sumNightCount').textContent = `${toBnNum(stats.totalNight)} টি`;
+            document.getElementById('sumHolidayCount').textContent = `${toBnNum(stats.totalHoliday)} টি`;
+            document.getElementById('sumTiffinCount').textContent = `${toBnNum(stats.totalTiffin)} টি`;
+            document.getElementById('sumExtraMoney').textContent = `৳ ${toBnNum(stats.extraMoney)}`;
+
+            const bonusBadgeMini = document.getElementById('bonusBadgeMini');
+            if (stats.totalAbsent > 0) {
+                bonusBadgeMini.textContent = `⚠️ ${toBnNum(stats.totalAbsent)} দিন অনুপস্থিত (হাজিরা বোনাস কাটা)`;
+                bonusBadgeMini.className = 'text-[11px] text-rose-200 font-bold';
+            } else {
+                bonusBadgeMini.textContent = `✅ হাজিরা বোনাস চালু (+৳ ${toBnNum(appSettings.attendanceBonus)})`;
+                bonusBadgeMini.className = 'text-[11px] text-emerald-200 font-medium';
+            }
+
+            // Payslip tab values
+            const bonusAlert = document.getElementById('payslipBonusAlert');
+            if (stats.totalAbsent > 0) {
+                bonusAlert.className = 'rounded-xl p-3 text-xs font-semibold flex items-center gap-2.5 bg-rose-50 dark:bg-rose-950/60 text-rose-800 dark:text-rose-200 border border-rose-200 dark:border-rose-800';
+                bonusAlert.innerHTML = `<span class="text-base">⚠️</span><span>এই মাসে ${toBnNum(stats.totalAbsent)} দিন অনুপস্থিত থাকায় হাজিরা বোনাস (৳ ${toBnNum(appSettings.attendanceBonus)}) যোগ হয়নি।</span>`;
+            } else {
+                bonusAlert.className = 'rounded-xl p-3 text-xs font-semibold flex items-center gap-2.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800';
+                bonusAlert.innerHTML = `<span class="text-base">✅</span><span>পূর্ণ উপস্থিতি! হাজিরা বোনাস ৳ ${toBnNum(appSettings.attendanceBonus)} যুক্ত হয়েছে।</span>`;
+            }
+
+            document.getElementById('slipGross').textContent = `৳ ${toBnNum(appSettings.grossSalary)}`;
+            document.getElementById('slipOtFormula').textContent = `${toBnNum(stats.totalOt)} ঘণ্টা × ৳ ${toBnNum(appSettings.otRate)}`;
+            document.getElementById('slipOtBill').textContent = `+ ৳ ${toBnNum(stats.otBill)}`;
+            document.getElementById('slipNightFormula').textContent = `${toBnNum(stats.totalNight)} টি × ৳ ${toBnNum(appSettings.nightRate)}`;
+            document.getElementById('slipNightBill').textContent = `+ ৳ ${toBnNum(stats.nightBill)}`;
+            document.getElementById('slipHolidayFormula').textContent = `${toBnNum(stats.totalHoliday)} টি × ৳ ${toBnNum(appSettings.holidayRate)}`;
+            document.getElementById('slipHolidayBill').textContent = `+ ৳ ${toBnNum(stats.holidayBill)}`;
+            document.getElementById('slipTiffinFormula').textContent = `${toBnNum(stats.totalTiffin)} টি × ৳ ${toBnNum(appSettings.tiffinRate)}`;
+            document.getElementById('slipTiffinBill').textContent = `+ ৳ ${toBnNum(stats.tiffinBill)}`;
+            document.getElementById('slipBonusBill').textContent = stats.bonusEarned > 0 ? `+ ৳ ${toBnNum(stats.bonusEarned)}` : `৳ ০ (কাটা)`;
+            document.getElementById('slipGrandTotal').textContent = `৳ ${toBnNum(stats.grandTotal)}`;
+
+            // Render logs & calendar
+            const recentContainer = document.getElementById('recentLogsContainer');
+            const fullContainer = document.getElementById('fullLogsContainer');
+
+            if (stats.entries.length === 0) {
+                const emptyState = `
+                    <div class="text-center py-6 px-3 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700">
+                        <p class="text-sm font-semibold text-slate-500">এই মাসে এখনো কোনো হিসাব যোগ করা হয়নি</p>
+                        <p class="text-xs text-slate-400 mt-1">উপরের বাটনে চাপ দিয়ে আজকের কাজ সেভ করুন</p>
+                    </div>
+                `;
+                recentContainer.innerHTML = emptyState;
+                fullContainer.innerHTML = emptyState;
+            } else {
+                recentContainer.innerHTML = stats.entries.slice(0, 4).map(createLogRowHTML).join('');
+                fullContainer.innerHTML = stats.entries.map(createLogRowHTML).join('');
+            }
+
+            renderCalendarGrid(year, month);
+            renderSelectedDayPanel();
+        }
+
+        // ==========================================
+        // 6. SETTINGS, NAVIGATION & WHATSAPP SHARE
+        // ==========================================
+        function populateSettingsForm() {
+            document.getElementById('setWorkerName').value = appSettings.workerName || '';
+            document.getElementById('setWorkerId').value = appSettings.workerId || '';
+            document.getElementById('setDesignation').value = appSettings.designation || '';
+            document.getElementById('setGrossSalary').value = appSettings.grossSalary || 12500;
+            document.getElementById('setBasicSalary').value = appSettings.basicSalary || 8000;
+            document.getElementById('setOtRate').value = appSettings.otRate || 76.92;
+            document.getElementById('setAttendanceBonus').value = appSettings.attendanceBonus ?? 800;
+            document.getElementById('setNightRate').value = appSettings.nightRate ?? 100;
+            document.getElementById('setHolidayRate').value = appSettings.holidayRate ?? 300;
+            document.getElementById('setTiffinRate').value = appSettings.tiffinRate ?? 40;
+            document.getElementById('setAutoTiffin').checked = Boolean(appSettings.autoTiffin);
+        }
+
+        function autoCalcRatesFromBasic() {
+            const basic = parseFloat(document.getElementById('setBasicSalary').value) || 0;
+            if (basic > 0) {
+                const otHourly = Math.round(((basic / 208) * 2) * 100) / 100;
+                document.getElementById('setOtRate').value = otHourly;
+            }
+        }
+
+        function saveSettings() {
+            appSettings.workerName = document.getElementById('setWorkerName').value.trim();
+            appSettings.workerId = document.getElementById('setWorkerId').value.trim();
+            appSettings.designation = document.getElementById('setDesignation').value.trim();
+            appSettings.grossSalary = parseFloat(document.getElementById('setGrossSalary').value) || 0;
+            appSettings.basicSalary = parseFloat(document.getElementById('setBasicSalary').value) || 0;
+            appSettings.otRate = parseFloat(document.getElementById('setOtRate').value) || 0;
+            appSettings.attendanceBonus = parseFloat(document.getElementById('setAttendanceBonus').value) || 0;
+            appSettings.nightRate = parseFloat(document.getElementById('setNightRate').value) || 0;
+            appSettings.holidayRate = parseFloat(document.getElementById('setHolidayRate').value) || 0;
+            appSettings.tiffinRate = parseFloat(document.getElementById('setTiffinRate').value) || 0;
+            appSettings.autoTiffin = document.getElementById('setAutoTiffin').checked;
+
+            persistSettings();
+            renderAll();
+            showToast('সব সেটিংস সেভ হয়েছে!');
+            switchTab('home');
+        }
+
+        function switchTab(tabName) {
+            ['home', 'history', 'payslip', 'settings'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tabName);
+                const navBtn = document.getElementById(`nav-${t}`);
+                if (t === tabName) {
+                    navBtn.className = 'tap-btn flex flex-col items-center justify-center text-emerald-700 dark:text-emerald-400 font-bold';
+                } else {
+                    navBtn.className = 'tap-btn flex flex-col items-center justify-center text-slate-500 dark:text-slate-400 font-medium';
+                }
+            });
+            if (tabName === 'settings') populateSettingsForm();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function setHistorySubView(view) {
+            historySubView = view;
+            const isCal = view === 'calendar';
+            document.getElementById('calendarViewBox').classList.toggle('hidden', !isCal);
+            document.getElementById('listViewBox').classList.toggle('hidden', isCal);
+            document.getElementById('btnViewCal').className = isCal
+                ? 'px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                : 'px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400';
+            document.getElementById('btnViewList').className = !isCal
+                ? 'px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-slate-700 text-emerald-700 dark:text-emerald-300 shadow-2xs'
+                : 'px-2.5 py-1 rounded-lg text-xs font-bold text-slate-600 dark:text-slate-400';
+        }
+
+        function generateFormattedReport() {
+            const year = activeMonthDate.getFullYear();
+            const month = activeMonthDate.getMonth();
+            const monthTitle = `${BN_MONTHS[month]} ${toBnNum(year)}`;
+            const stats = getMonthlyStats(year, month);
+
+            let text = `📋 *আমার হাজিরা ও বেতন হিসাব (${monthTitle})*\n`;
+            if (appSettings.workerName) text += `নাম: ${appSettings.workerName} ${appSettings.workerId ? `(ID: ${appSettings.workerId})` : ''}\n`;
+            if (appSettings.designation) text += `পদবি/লাইন: ${appSettings.designation}\n`;
+            text += `------------------------\n`;
+            text += `⏱ মোট ওভারটাইম: ${toBnNum(stats.totalOt)} ঘণ্টা (৳ ${toBnNum(stats.otBill)})\n`;
+            text += `🌙 মোট নাইট ডিউটি: ${toBnNum(stats.totalNight)} টি (৳ ${toBnNum(stats.nightBill)})\n`;
+            text += `📅 মোট হলিডে ডিউটি: ${toBnNum(stats.totalHoliday)} টি (৳ ${toBnNum(stats.holidayBill)})\n`;
+            text += `🍱 মোট টিফিন বিল: ${toBnNum(stats.totalTiffin)} টি (৳ ${toBnNum(stats.tiffinBill)})\n`;
+            text += `🎁 হাজিরা বোনাস: ৳ ${toBnNum(stats.bonusEarned)}\n`;
+            text += `💵 মূল গ্রস বেতন: ৳ ${toBnNum(appSettings.grossSalary)}\n`;
+            text += `💰 *সর্বমোট সম্ভাব্য বেতন: ৳ ${toBnNum(stats.grandTotal)}*\n`;
+            text += `------------------------\n`;
+
+            stats.entries.slice().reverse().forEach(e => {
+                const dObj = parseLocalDate(e.dateStr);
+                const tags = [];
+                if (e.absent) tags.push('অনুপস্থিত');
+                else {
+                    if (e.ot > 0) tags.push(`${toBnNum(e.ot)}h OT`);
+                    if (e.night) tags.push('নাইট');
+                    if (e.holiday) tags.push('হলিডে');
+                    if (e.tiffin) tags.push('টিফিন');
+                }
+                text += `• ${toBnNum(dObj.getDate())} ${BN_MONTHS[dObj.getMonth()]}: ${tags.join(', ')}\n`;
+            });
+            return text;
+        }
+
+        function shareToWhatsApp() {
+            const report = generateFormattedReport();
+            const waUrl = `https://wa.me/?text=${encodeURIComponent(report)}`;
+            window.open(waUrl, '_blank');
+        }
+
+        function copySummaryToClipboard() {
+            const text = generateFormattedReport();
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            document.body.appendChild(ta);
+            ta.select();
+            try {
+                document.execCommand('copy');
+                showToast('হিসাব কপি হয়েছে! এখন পেস্ট করুন');
+            } catch (err) {
+                showToast('কপি করা সম্ভব হয়নি');
+            }
+            document.body.removeChild(ta);
+        }
+
+        function exportJsonBackup() {
+            const dataStr = JSON.stringify({ settings: appSettings, logs: attendanceLogs }, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `amar_hajira_backup_${formatDateStr(new Date())}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('ব্যাকআপ ফাইল ডাউনলোড হচ্ছে');
+        }
+
+
+        function exportMonthlyCsv() {
+            const stats = getMonthlyStats(activeMonthDate.getFullYear(), activeMonthDate.getMonth());
+            const rows = [['তারিখ','OT ঘণ্টা','নাইট ডিউটি','হলিডে ডিউটি','টিফিন','অনুপস্থিত','দিনের অতিরিক্ত টাকা','নোট']];
+            stats.entries.slice().reverse().forEach(function(entry) {
+                rows.push([entry.dateStr, entry.ot || 0, entry.night ? 'হ্যাঁ' : 'না', entry.holiday ? 'হ্যাঁ' : 'না', entry.tiffin ? 'হ্যাঁ' : 'না', entry.absent ? 'হ্যাঁ' : 'না', entry.dayBill || 0, entry.note || '']);
+            });
+            const csv = '\uFEFF' + rows.map(function(row) {
+                return row.map(function(value) { return '"' + String(value ?? '').replace(/"/g, '""') + '"'; }).join(',');
+            }).join('\r\n');
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'hajira_report_' + activeMonthDate.getFullYear() + '-' + String(activeMonthDate.getMonth() + 1).padStart(2, '0') + '.csv';
+            a.click();
+            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+            showToast('মাসিক CSV রিপোর্ট ডাউনলোড হচ্ছে');
+        }
+
+        function copyDonationNumber() {
+            const number = '01402047272';
+            const fallback = function() {
+                const input = document.createElement('textarea');
+                input.value = number;
+                document.body.appendChild(input);
+                input.select();
+                try { document.execCommand('copy'); showToast('MFS নম্বর কপি হয়েছে'); }
+                catch (e) { showToast('নম্বর কপি করা যায়নি'); }
+                input.remove();
+            };
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(number).then(function() { showToast('MFS নম্বর কপি হয়েছে'); }).catch(fallback);
+            } else fallback();
+        }
+
+        async function derivePinHash(pin, salt) {
+            if (!window.crypto || !crypto.subtle) throw new Error('Secure crypto unavailable');
+            const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+            const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: salt, iterations: 120000, hash: 'SHA-256' }, key, 256);
+            return Array.from(new Uint8Array(bits), function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+        }
+
+        async function savePinLock() {
+            const pin = document.getElementById('setPin').value.trim();
+            const confirmPin = document.getElementById('confirmPin').value.trim();
+            if (!/^\d{4,8}$/.test(pin)) return showToast('৪–৮ সংখ্যার PIN দিন');
+            if (pin !== confirmPin) return showToast('দুইবার দেওয়া PIN মিলছে না');
+            try {
+                const salt = crypto.getRandomValues(new Uint8Array(16));
+                appSettings.pinSalt = Array.from(salt, function(byte) { return byte.toString(16).padStart(2, '0'); }).join('');
+                appSettings.pinHash = await derivePinHash(pin, salt);
+                persistSettings();
+                document.getElementById('setPin').value = '';
+                document.getElementById('confirmPin').value = '';
+                showToast('PIN লক চালু হয়েছে');
+                resetAutoLockTimer();
+            } catch (error) {
+                showToast('এই browser-এ নিরাপদ PIN সুবিধা পাওয়া যাচ্ছে না');
+            }
+        }
+
+        function removePinLock() {
+            if (!appSettings.pinHash) return showToast('PIN লক চালু নেই');
+            openConfirmModal('PIN লক বন্ধ করুন', 'আপনি কি PIN লক বন্ধ করতে চান?', function() {
+                delete appSettings.pinHash;
+                delete appSettings.pinSalt;
+                persistSettings();
+                document.getElementById('pinLockOverlay').classList.add('hidden');
+                showToast('PIN লক বন্ধ হয়েছে');
+            });
+        }
+
+        function lockApp() {
+            if (!appSettings.pinHash) return;
+            const overlay = document.getElementById('pinLockOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('hidden');
+            document.getElementById('unlockPinInput').value = '';
+            document.getElementById('pinError').classList.add('hidden');
+            clearTimeout(autoLockTimer);
+        }
+
+        async function unlockApp() {
+            const input = document.getElementById('unlockPinInput');
+            const pin = input.value.trim();
+            if (!/^\d{4,8}$/.test(pin)) {
+                document.getElementById('pinError').classList.remove('hidden');
+                return;
+            }
+            try {
+                const saltHex = appSettings.pinSalt || '';
+                const salt = new Uint8Array((saltHex.match(/.{2}/g) || []).map(function(pair) { return parseInt(pair, 16); }));
+                const candidate = await derivePinHash(pin, salt);
+                if (candidate !== appSettings.pinHash) {
+                    document.getElementById('pinError').classList.remove('hidden');
+                    input.value = '';
+                    return;
+                }
+                document.getElementById('pinLockOverlay').classList.add('hidden');
+                document.getElementById('pinError').classList.add('hidden');
+                resetAutoLockTimer();
+                showToast('অ্যাপ আনলক হয়েছে');
+            } catch (error) {
+                document.getElementById('pinError').textContent = 'PIN যাচাই করা যাচ্ছে না। নিরাপদ browser ব্যবহার করুন।';
+                document.getElementById('pinError').classList.remove('hidden');
+            }
+        }
+
+        let autoLockTimer = null;
+        function resetAutoLockTimer() {
+            clearTimeout(autoLockTimer);
+            const overlay = document.getElementById('pinLockOverlay');
+            if (appSettings.pinHash && overlay && overlay.classList.contains('hidden')) {
+                autoLockTimer = setTimeout(lockApp, 5 * 60 * 1000);
+            }
+        }
+        ['pointerdown','keydown','touchstart'].forEach(function(name) {
+            document.addEventListener(name, resetAutoLockTimer, { passive: true });
+        });
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) lockApp();
+            else resetAutoLockTimer();
+        });
+
+        function importJsonBackup(event) {
+            const file = event.target.files && event.target.files[0];
+            if (!file) return;
+            if (file.size > 2 * 1024 * 1024) {
+                showToast('ব্যাকআপ ফাইল ২ MB-এর কম হতে হবে');
+                event.target.value = '';
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const parsed = JSON.parse(e.target.result);
+                    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) throw new Error('Invalid backup');
+                    const allowed = ['workerName','workerId','designation','grossSalary','basicSalary','otRate','attendanceBonus','nightRate','holidayRate','tiffinRate','autoTiffin','darkMode'];
+                    const cleanSettings = {};
+                    if (parsed.settings && typeof parsed.settings === 'object' && !Array.isArray(parsed.settings)) {
+                        allowed.forEach(function(key) {
+                            const value = parsed.settings[key];
+                            if (['workerName','workerId','designation'].includes(key) && typeof value === 'string') cleanSettings[key] = value.slice(0, 100);
+                            else if (['autoTiffin','darkMode'].includes(key) && typeof value === 'boolean') cleanSettings[key] = value;
+                            else if (['grossSalary','basicSalary','otRate','attendanceBonus','nightRate','holidayRate','tiffinRate'].includes(key) && Number.isFinite(Number(value)) && Number(value) >= 0 && Number(value) <= 10000000) cleanSettings[key] = Number(value);
+                        });
+                    }
+                    const cleanLogs = {};
+                    if (parsed.logs && typeof parsed.logs === 'object' && !Array.isArray(parsed.logs)) {
+                        const dates = Object.keys(parsed.logs);
+                        if (dates.length > 10000) throw new Error('Too many records');
+                        dates.forEach(function(date) {
+                            const raw = parsed.logs[date];
+                            if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !raw || typeof raw !== 'object' || Array.isArray(raw)) return;
+                            const parts = date.split('-').map(Number);
+                            const check = new Date(parts[0], parts[1] - 1, parts[2]);
+                            if (check.getFullYear() !== parts[0] || check.getMonth() !== parts[1] - 1 || check.getDate() !== parts[2]) return;
+                            const ot = Number(raw.ot);
+                            if (!Number.isFinite(ot) || ot < 0 || ot > 24) return;
+                            cleanLogs[date] = { ot: ot, night: raw.night === true, holiday: raw.holiday === true, tiffin: raw.tiffin === true, absent: raw.absent === true, note: typeof raw.note === 'string' ? raw.note.slice(0, 120) : '' };
+                        });
+                    }
+                    if (!Object.keys(cleanSettings).length && !Object.keys(cleanLogs).length) throw new Error('No valid data');
+                    openConfirmModal('ব্যাকআপ রিস্টোর করুন', 'যাচাই করা ব্যাকআপ ডাটা বর্তমান হিসাবের সঙ্গে যোগ হবে। PIN সেটিংস আমদানি হবে না। চালিয়ে যাবেন?', function() {
+                        appSettings = Object.assign({}, appSettings, cleanSettings);
+                        attendanceLogs = Object.assign({}, attendanceLogs, cleanLogs);
+                        persistSettings();
+                        persistLogs();
+                        applyTheme();
+                        renderAll();
+                        showToast('যাচাই করা ব্যাকআপ রিস্টোর হয়েছে');
+                    });
+                } catch (error) {
+                    showToast('ভুল বা অসম্পূর্ণ ব্যাকআপ ফাইল!');
+                } finally {
+                    event.target.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+
+
+        // ==========================================
+        // 7. TOAST & CUSTOM CONFIRM MODAL
+        // ==========================================
+        let toastTimer = null;
+        function showToast(msg) {
+            const banner = document.getElementById('toastBanner');
+            document.getElementById('toastMessage').textContent = msg;
+            banner.classList.remove('hidden', 'toast-active');
+            void banner.offsetWidth;
+            banner.classList.add('toast-active');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => {
+                banner.classList.add('hidden');
+            }, 2400);
+        }
+
+        let pendingConfirmCallback = null;
+        function openConfirmModal(title, message, onConfirm) {
+            document.getElementById('confirmTitle').textContent = title;
+            document.getElementById('confirmMessage').textContent = message;
+            pendingConfirmCallback = onConfirm;
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+
+        function closeConfirmModal() {
+            document.getElementById('confirmModal').classList.add('hidden');
+            pendingConfirmCallback = null;
+        }
+
+        document.getElementById('confirmYesBtn').addEventListener('click', () => {
+            if (pendingConfirmCallback) pendingConfirmCallback();
+            closeConfirmModal();
+        });
+
+        // ==========================================
+        // 8. INITIALIZE ON LOAD
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            loadAppData();
+            document.getElementById('entryDateInput').value = selectedDateStr;
+            renderAll();
+            if (appSettings.pinHash) lockApp();
+            else resetAutoLockTimer();
+        });
+    </script>
+</body>
+</html>
