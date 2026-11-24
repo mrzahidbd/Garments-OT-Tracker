@@ -1,67 +1,42 @@
-"""Check the release UI and Android file picker on the clean CI emulator."""
-import re
+"""Exercise the real offline release in instrumentation signed with its disposable CI key."""
+import os
+from pathlib import Path
 import subprocess
-import time
-import xml.etree.ElementTree as ET
+from tempfile import TemporaryDirectory
+from zipfile import ZipFile
 
+root = Path(__file__).resolve().parent / "android-check"
+sdk = Path(os.environ["ANDROID_HOME"])
+tools = sdk / "build-tools/36.0.0"
+platform = sdk / "platforms/android-36/android.jar"
+key = Path(os.environ["RUNNER_TEMP"]) / "device-test.p12"
 
-def adb(*args):
-    return subprocess.check_output(["adb", *args], text=True, timeout=45)
+def run(*args):
+    subprocess.run([str(arg) for arg in args], check=True)
 
-
-def read_window():
-    for attempt in range(5):
-        try:
-            adb("shell", "uiautomator", "dump", "/sdcard/ot-window.xml")
-            return ET.fromstring(adb("exec-out", "cat", "/sdcard/ot-window.xml"))
-        except (ET.ParseError, subprocess.SubprocessError):
-            if attempt == 4:
-                raise
-            time.sleep(1)
-
-
-def find_label(label, tap=False, scroll=False):
-    for attempt in range(10):
-        window = read_window()
-        for node in window.iter("node"):
-            text = node.get("text", "") + " " + node.get("content-desc", "")
-            if label not in text:
-                continue
-            x1, y1, x2, y2 = map(int, re.findall(r"-?\d+", node.get("bounds", "")))
-            if x2 <= x1 or y2 <= y1:
-                continue
-            if tap:
-                adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
-            return
-        if scroll and attempt:
-            size = re.findall(r"(\d+)x(\d+)", adb("shell", "wm", "size"))[-1]
-            w, h = map(int, size)
-            adb("shell", "input", "swipe", str(w // 2), str(h * 3 // 4),
-                str(w // 2), str(h // 3), "300")
-        time.sleep(0.7)
-    labels = [n.get("text") or n.get("content-desc") for n in window.iter("node")]
-    print("Last visible labels:", [x for x in labels if x][-25:])
-    raise RuntimeError("Visible control not found: " + label)
-
-
-adb("shell", "svc", "wifi", "disable")
-adb("shell", "svc", "data", "disable")
-start = adb("shell", "am", "start", "-W", "-n", "com.mrzahidbd.garmentsot/.MainActivity")
-if "Status: ok" not in start:
-    raise RuntimeError(start)
-find_label("আমার হাজিরা ও OT")
-find_label("শেখা শুরু করুন", tap=True)
-find_label("হাজিরা ও OT অ্যাপে ফিরুন")
-adb("shell", "input", "keyevent", "KEYCODE_BACK")
-find_label("আমার হাজিরা ও OT")
-find_label("সেটিংস", tap=True)
-find_label("ব্যাকআপ নিন", tap=True, scroll=True)
-for attempt in range(8):
-    window = read_window()
-    if any("documentsui" in n.get("package", "").lower() for n in window.iter("node")):
-        print("Offline home, learning, back navigation and Android backup picker passed.")
-        break
-    time.sleep(1)
-else:
-    print(adb("shell", "dumpsys", "window", "displays")[-3000:])
-    raise RuntimeError("Android's document picker did not open")
+with TemporaryDirectory() as scratch:
+    work = Path(scratch)
+    classes, dex = work / "classes", work / "dex"
+    classes.mkdir()
+    dex.mkdir()
+    run("javac", "-encoding", "UTF-8", "-source", "8", "-target", "8", "-cp", platform,
+        "-d", classes, root / "PhoneCheck.java")
+    run("jar", "cf", work / "check.jar", "-C", classes, ".")
+    run(tools / "d8", "--min-api", "23", "--lib", platform, "--output", dex, work / "check.jar")
+    apk = work / "check.apk"
+    run(tools / "aapt2", "link", "-I", platform, "--manifest", root / "AndroidManifest.xml", "-o", apk)
+    with ZipFile(apk, "a") as archive:
+        archive.write(dex / "classes.dex", "classes.dex")
+    aligned = work / "aligned.apk"
+    run(tools / "zipalign", "-f", "4", apk, aligned)
+    run(tools / "apksigner", "sign", "--ks", key, "--ks-key-alias", "device-check",
+        "--ks-pass", "env:OT_DEVICE_KEY_PASSWORD", aligned)
+    run("adb", "install", "-r", "-t", aligned)
+    run("adb", "shell", "svc", "wifi", "disable")
+    run("adb", "shell", "svc", "data", "disable")
+    result = subprocess.run(
+        ["adb", "shell", "am", "instrument", "-w", "-r", "com.mrzahidbd.garmentsot.check/.PhoneCheck"],
+        capture_output=True, check=True, text=True, timeout=130)
+    print(result.stdout, flush=True)
+    if "PASS: Android 16" not in result.stdout or "INSTRUMENTATION_CODE: -1" not in result.stdout:
+        raise SystemExit("Release device check failed")
