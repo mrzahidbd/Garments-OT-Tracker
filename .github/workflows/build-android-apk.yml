@@ -6,6 +6,7 @@ on:
     paths:
       - 'index.html'
       - 'learning.html'
+      - 'platform-files.js'
       - 'app/**'
       - 'tools/**'
       - 'build.gradle'
@@ -58,7 +59,7 @@ jobs:
           java -jar "$bundletool" validate --bundle="$bundle"
           test "$(java -jar "$bundletool" dump manifest --bundle="$bundle" --xpath='/manifest/@package')" = com.mrzahidbd.garmentsot
           test "$(java -jar "$bundletool" dump manifest --bundle="$bundle" --xpath='/manifest/uses-sdk/@android:targetSdkVersion')" = 36
-          for asset in index.html learning.html tracker.css; do
+          for asset in index.html learning.html platform-files.js tracker.css; do
             unzip -p "$bundle" "base/assets/$asset" | cmp - "app/src/main/assets/$asset"
             unzip -p "$apk" "assets/$asset" | cmp - "app/src/main/assets/$asset"
           done
@@ -78,3 +79,26 @@ jobs:
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
+
+      - name: Check the release on an Android 16 emulator
+        if: github.ref == 'refs/heads/build/play-1.0.1'
+        timeout-minutes: 15
+        run: |
+          set -euo pipefail
+          sdk="$ANDROID_HOME/cmdline-tools/latest/bin"
+          image='system-images;android-36;google_apis;x86_64'
+          "$sdk/sdkmanager" 'emulator' 'platform-tools' "$image"
+          echo no | "$sdk/avdmanager" create avd --force --name tracker-phone --package "$image"
+          if test -e /dev/kvm; then sudo chown "$(id -u):$(id -g)" /dev/kvm; fi
+          "$ANDROID_HOME/emulator/emulator" -avd tracker-phone -no-window -no-audio -no-snapshot -no-boot-anim -gpu swiftshader_indirect > "$RUNNER_TEMP/tracker-emulator.log" 2>&1 &
+          emulator_pid=$!
+          trap 'kill "$emulator_pid" 2>/dev/null || true' EXIT
+          timeout 100 adb wait-for-device
+          timeout 240 bash -c 'until adb shell getprop sys.boot_completed | grep -q 1; do sleep 2; done'
+          adb shell wm dismiss-keyguard
+          adb shell settings put global window_animation_scale 0
+          adb shell settings put global transition_animation_scale 0
+          adb shell settings put global animator_duration_scale 0
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/check.apk" release-files/app-release-unsigned.apk
+          adb install -r "$RUNNER_TEMP/check.apk"
+          python3 tools/check-android-device.py

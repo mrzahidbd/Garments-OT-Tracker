@@ -7,6 +7,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>আমার হাজিরা ও ওভারটাইম</title>
+    <script src="platform-files.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -1263,7 +1264,11 @@
         function shareToWhatsApp() {
             const report = generateFormattedReport();
             const waUrl = `https://wa.me/?text=${encodeURIComponent(report)}`;
-            window.open(waUrl, '_blank');
+            if (location.hostname === 'appassets.androidplatform.net') {
+                location.assign(waUrl);
+            } else {
+                window.open(waUrl, '_blank', 'noopener');
+            }
         }
 
         function copySummaryToClipboard() {
@@ -1286,14 +1291,8 @@
             delete backupSettings.pinHash;
             delete backupSettings.pinSalt;
             const dataStr = JSON.stringify({ settings: backupSettings, logs: attendanceLogs }, null, 2);
-            const blob = new Blob([dataStr], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `amar_hajira_backup_${formatDateStr(new Date())}.json`;
-            a.click();
-            URL.revokeObjectURL(url);
-            showToast('ব্যাকআপ ফাইল ডাউনলোড হচ্ছে');
+            const name = `amar_hajira_backup_${formatDateStr(new Date())}.json`;
+            saveTrackerFile(name, 'application/json', dataStr);
         }
 
 
@@ -1306,14 +1305,9 @@
             const csv = '\uFEFF' + rows.map(function(row) {
                 return row.map(function(value) { return '"' + String(value ?? '').replace(/"/g, '""') + '"'; }).join(',');
             }).join('\r\n');
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'hajira_report_' + activeMonthDate.getFullYear() + '-' + String(activeMonthDate.getMonth() + 1).padStart(2, '0') + '.csv';
-            a.click();
-            setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
-            showToast('মাসিক CSV রিপোর্ট ডাউনলোড হচ্ছে');
+            const month = String(activeMonthDate.getMonth() + 1).padStart(2, '0');
+            const name = `hajira_report_${activeMonthDate.getFullYear()}-${month}.csv`;
+            saveTrackerFile(name, 'text/csv;charset=utf-8', csv);
         }
 
         function copyDonationNumber() {
