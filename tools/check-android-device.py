@@ -10,8 +10,14 @@ def adb(*args):
 
 
 def read_window():
-    adb("shell", "uiautomator", "dump", "/sdcard/ot-window.xml")
-    return ET.fromstring(adb("exec-out", "cat", "/sdcard/ot-window.xml"))
+    for attempt in range(5):
+        try:
+            adb("shell", "uiautomator", "dump", "/sdcard/ot-window.xml")
+            return ET.fromstring(adb("exec-out", "cat", "/sdcard/ot-window.xml"))
+        except (ET.ParseError, subprocess.SubprocessError):
+            if attempt == 4:
+                raise
+            time.sleep(1)
 
 
 def find_label(label, tap=False, scroll=False):

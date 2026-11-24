@@ -118,6 +118,10 @@ jobs:
           adb shell settings put global window_animation_scale 0
           adb shell settings put global transition_animation_scale 0
           adb shell settings put global animator_duration_scale 0
-          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out "$RUNNER_TEMP/check.apk" release-files/app-release-unsigned.apk
+          export OT_DEVICE_KEY_PASSWORD
+          OT_DEVICE_KEY_PASSWORD="$(openssl rand -hex 24)"
+          test_key="$RUNNER_TEMP/device-test.p12"
+          keytool -genkeypair -alias device-check -keyalg RSA -keysize 2048 -validity 7 -storetype PKCS12 -keystore "$test_key" -storepass:env OT_DEVICE_KEY_PASSWORD -dname "CN=Ephemeral Device Check"
+          "$ANDROID_HOME/build-tools/36.0.0/apksigner" sign --ks "$test_key" --ks-key-alias device-check --ks-pass env:OT_DEVICE_KEY_PASSWORD --out "$RUNNER_TEMP/check.apk" release-files/app-release-unsigned.apk
           adb install -r "$RUNNER_TEMP/check.apk"
           python3 tools/check-android-device.py
