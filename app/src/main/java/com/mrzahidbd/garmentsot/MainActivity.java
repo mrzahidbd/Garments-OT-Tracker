@@ -2,6 +2,10 @@ package com.mrzahidbd.garmentsot;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.Build;
+import android.graphics.Insets;
+import android.view.WindowInsets;
+import android.widget.FrameLayout;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
@@ -40,7 +44,18 @@ public class MainActivity extends Activity {
             }
         });
         webView.setWebChromeClient(new WebChromeClient());
-        setContentView(webView);
+        FrameLayout container = new FrameLayout(this);
+        container.addView(webView);
+        if (Build.VERSION.SDK_INT >= 35) {
+            container.setOnApplyWindowInsetsListener((view, windowInsets) -> {
+                int types = WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout()
+                        | WindowInsets.Type.ime();
+                Insets insets = windowInsets.getInsets(types);
+                view.setPadding(insets.left, insets.top, insets.right, insets.bottom);
+                return WindowInsets.CONSUMED;
+            });
+        }
+        setContentView(container);
 
         if (savedInstanceState == null) {
             webView.loadUrl("https://appassets.androidplatform.net/assets/index.html");
