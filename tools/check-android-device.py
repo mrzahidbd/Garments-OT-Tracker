@@ -33,6 +33,8 @@ def find_label(label, tap=False, scroll=False):
             adb("shell", "input", "swipe", str(w // 2), str(h * 3 // 4),
                 str(w // 2), str(h // 3), "300")
         time.sleep(0.7)
+    labels = [n.get("text") or n.get("content-desc") for n in window.iter("node")]
+    print("Last visible labels:", [x for x in labels if x][-25:])
     raise RuntimeError("Visible control not found: " + label)
 
 
@@ -55,4 +57,5 @@ for attempt in range(8):
         break
     time.sleep(1)
 else:
+    print(adb("shell", "dumpsys", "window", "displays")[-3000:])
     raise RuntimeError("Android's document picker did not open")
