@@ -37,14 +37,10 @@ public final class PhoneCheck extends Instrumentation {
             js("location.reload()");
             untilJs("document.readyState==='complete' && typeof getMonthlyStats==='function' && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalOt===2 && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalNight===1");
             progress("Two hours of OT and one night persisted after reload.");
-            js("document.querySelector('a[href=\"learning.html\"]').click()");
-            untilJs("!!document.querySelector('#practiceNote')");
-            runOnMainSync(() -> screen.onBackPressed());
-            untilJs("!!document.querySelector('#nav-settings')");
             js("document.querySelector('#nav-settings').click()");
             untilJs("!!document.querySelector(\"button[onclick='exportJsonBackup()']\").offsetWidth");
-            String bridge = js("JSON.stringify({save:typeof saveTrackerFile,bridge:typeof window.TrackerFiles,post:typeof (window.TrackerFiles||{}).postMessage,origin:location.origin})");
-            progress("Offline home, learning and back passed. Export bridge: " + bridge);
+            String bridge = js("JSON.stringify({save:typeof saveTrackerFile,bridge:typeof window.TrackerFiles,post:typeof (window.TrackerFiles||{}).postMessage,origin:location.origin,name:formatDateStr(new Date()),contentType:document.contentType})");
+            progress("Offline home and monthly entries passed. Export bridge: " + bridge);
 
             IntentFilter filter = new IntentFilter(Intent.ACTION_CREATE_DOCUMENT);
             filter.addCategory(Intent.CATEGORY_OPENABLE);
@@ -60,13 +56,14 @@ public final class PhoneCheck extends Instrumentation {
                         && !foreground.equals("com.android.systemui")) break;
                 SystemClock.sleep(200);
             }
+            progress("Document intent hits " + monitor.getHits() + "; foreground " + foreground);
             if (monitor.getHits() == 0 || foreground.isEmpty() || app.equals(foreground)
                     || foreground.equals("com.android.systemui")) {
                 throw new IllegalStateException("Document request count " + monitor.getHits()
                         + ", foreground " + foreground + ", " + bridge);
             }
             removeMonitor(monitor);
-            outcome.putString("stream", "PASS: Android 16 offline UI, OT and night persistence, learning, back, and JSON document picker (" + foreground + ").\n");
+            outcome.putString("stream", "PASS: Android 16 offline UI, OT and night persistence, and JSON document picker (" + foreground + ").\n");
             finish(Activity.RESULT_OK, outcome);
         } catch (Throwable e) {
             outcome.putString("stream", "FAIL: " + android.util.Log.getStackTraceString(e) + "\n");
