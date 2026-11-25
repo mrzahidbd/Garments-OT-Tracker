@@ -33,10 +33,18 @@ public final class PhoneCheck extends Instrumentation {
             if (web == null) throw new IllegalStateException("Missing application WebView");
             untilJs("document.readyState==='complete' && !!document.querySelector('#btnToggleNight')");
             untilJs("document.querySelector('h1').textContent.includes('আমার হাজিরা')");
-            js("document.querySelector(\"button[onclick='addOtHours(2)']\").click(); document.querySelector('#btnToggleNight').click()");
-            js("location.reload()");
-            untilJs("document.readyState==='complete' && typeof getMonthlyStats==='function' && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalOt===2 && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalNight===1");
-            progress("Two hours of OT and one night persisted after reload.");
+            untilJs("!document.querySelector('a[href*=learning]')");
+            // Use the same persisted fields as 1.0.1. The old record must survive a fresh launch.
+            js("localStorage.setItem('garments_ot_logs_v2', JSON.stringify({'2022-03-01':{ot:3,night:true}})); localStorage.setItem('garments_ot_settings_v2', JSON.stringify({workerName:'পুরনো রেকর্ড',otRate:80}));location.reload()");
+            untilJs("typeof attendanceLogs!=='undefined' && attendanceLogs['2022-03-01'] && appSettings.otRate===80");
+            js("document.querySelector(\"button[onclick='addOtHours(2)']\").click();document.querySelector(\"button[onclick='adjustSelectedOt(0.5)']\").click();document.querySelector('#btnToggleNight').click()");
+            js("document.querySelector('#nav-payslip').click();document.querySelector('#paidOtHours').value='১:৩০';document.querySelector('#paidOtMoney').value='১০০';document.querySelector('#paidOtForm button[type=submit]').click()");
+            untilJs("document.querySelector('#paidOtResult').textContent.includes('১ ঘণ্টা কম') && document.querySelector('#paidOtResult').textContent.includes('৳১০০ কম')");
+            js("document.querySelector('button[aria-label=\"আগের মাস\"]').click()");
+            untilJs("document.querySelector('#paidOtHours').value==='' && document.querySelector('#clearPaidOt').hidden");
+            js("document.querySelector('button[aria-label=\"পরের মাস\"]').click();location.reload()");
+            untilJs("typeof getMonthlyStats==='function' && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalOt===2.5 && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalNight===1 && monthlyPayslips[payslipMonth(activeMonthDate)]?.paidMinutes===90 && attendanceLogs['2022-03-01'].ot===3");
+            progress("Legacy data, half-hour entry, Bengali hours and money, monthly separation and persisted payslip comparison passed.");
             js("document.querySelector('#nav-settings').click()");
             untilJs("!!document.querySelector(\"button[onclick='exportJsonBackup()']\").offsetWidth");
             String bridge = js("JSON.stringify({save:typeof saveTrackerFile,bridge:typeof window.TrackerFiles,post:typeof (window.TrackerFiles||{}).postMessage,origin:location.origin,name:formatDateStr(new Date()),contentType:document.contentType})");
@@ -63,7 +71,7 @@ public final class PhoneCheck extends Instrumentation {
                         + ", foreground " + foreground + ", " + bridge);
             }
             removeMonitor(monitor);
-            outcome.putString("stream", "PASS: Android 16 offline UI, OT and night persistence, and JSON document picker (" + foreground + ").\n");
+            outcome.putString("stream", "PASS: Android 16 offline OT, payslip comparison, existing records, and JSON document picker (" + foreground + ").\n");
             finish(Activity.RESULT_OK, outcome);
         } catch (Throwable e) {
             outcome.putString("stream", "FAIL: " + android.util.Log.getStackTraceString(e) + "\n");

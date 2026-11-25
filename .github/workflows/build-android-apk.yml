@@ -2,10 +2,10 @@ name: Build Android APK
 
 on:
   push:
-    branches: [main, build/play-1.0.1]
+    branches: [main, 'build/play-*']
     paths:
       - 'index.html'
-      - 'learning.html'
+      - 'payslip.js'
       - 'platform-files.js'
       - 'app/**'
       - 'tools/**'
@@ -43,7 +43,7 @@ jobs:
       - name: Package offline web assets
         run: |
           python3 tools/prepare-android-assets.py
-          npx --yes --package=tailwindcss@3.4.17 -- tailwindcss -c tools/tailwind.android.cjs -i tools/tailwind.android.css -o app/src/main/assets/tracker.css --minify
+          npx --yes --package=tailwindcss@3.4.17 -- tailwindcss -c tools/tailwind.android.cjs -i tools/tailwind.android.css -o app/build/generated/trackerAssets/tracker.css --minify
 
       - name: Build APKs and Play bundle
         run: gradle --no-daemon :app:assembleDebug :app:assembleRelease :app:bundleRelease
@@ -59,10 +59,12 @@ jobs:
           java -jar "$bundletool" validate --bundle="$bundle"
           test "$(java -jar "$bundletool" dump manifest --bundle="$bundle" --xpath='/manifest/@package')" = com.mrzahidbd.garmentsot
           test "$(java -jar "$bundletool" dump manifest --bundle="$bundle" --xpath='/manifest/uses-sdk/@android:targetSdkVersion')" = 36
-          for asset in index.html learning.html platform-files.js tracker.css; do
-            unzip -p "$bundle" "base/assets/$asset" | cmp - "app/src/main/assets/$asset"
-            unzip -p "$apk" "assets/$asset" | cmp - "app/src/main/assets/$asset"
+          for asset in index.html platform-files.js payslip.js tracker.css; do
+            unzip -p "$bundle" "base/assets/$asset" | cmp - "app/build/generated/trackerAssets/$asset"
+            unzip -p "$apk" "assets/$asset" | cmp - "app/build/generated/trackerAssets/$asset"
           done
+          if unzip -Z1 "$apk" | grep -Fx 'assets/learning.html'; then exit 1; fi
+          if unzip -Z1 "$bundle" | grep -Fx 'base/assets/learning.html'; then exit 1; fi
           mkdir -p release-files
           cp "$apk" "$bundle" "$ANDROID_HOME/build-tools/36.0.0/lib/apksigner.jar" release-files/
 
@@ -81,7 +83,7 @@ jobs:
           retention-days: 30
 
       - name: Check the release on an Android 16 emulator
-        if: github.ref == 'refs/heads/build/play-1.0.1'
+        if: startsWith(github.ref, 'refs/heads/build/play-')
         timeout-minutes: 15
         run: |
           set -euo pipefail

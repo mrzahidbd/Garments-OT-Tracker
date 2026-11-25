@@ -90,7 +90,7 @@ public class MainActivity extends Activity {
             });
         }
         setContentView(container);
-        if (state == null || webView.restoreState(state) == null) webView.loadUrl(HOME);
+        if (state == null || !state.getBoolean("singleTrackerPage") || webView.restoreState(state) == null) webView.loadUrl(HOME);
         if (Build.VERSION.SDK_INT >= 33) {
             getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
                     OnBackInvokedDispatcher.PRIORITY_DEFAULT, this::goBack);
@@ -99,8 +99,7 @@ public class MainActivity extends Activity {
 
     private boolean navigate(Uri uri, boolean mainFrame) {
         if ("https".equals(uri.getScheme()) && HOST.equals(uri.getAuthority())
-                && ("/assets/index.html".equals(uri.getPath())
-                    || "/assets/learning.html".equals(uri.getPath()))) return false;
+                && "/assets/index.html".equals(uri.getPath())) return false;
         if (mainFrame && "https".equals(uri.getScheme()) && "wa.me".equals(uri.getAuthority())) {
             try {
                 startActivity(new Intent(Intent.ACTION_VIEW, uri));
@@ -119,6 +118,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onSaveInstanceState(Bundle state) {
+        state.putBoolean("singleTrackerPage", true);
         webView.saveState(state);
         documents.saveState(state);
         super.onSaveInstanceState(state);
