@@ -4,14 +4,16 @@ plugins {
 
 android {
     namespace 'com.mrzahidbd.garmentsot'
-    compileSdk 35
+    compileSdk 36
+
+    sourceSets.main.assets.setSrcDirs([layout.buildDirectory.dir('generated/trackerAssets').get().asFile])
 
     defaultConfig {
         applicationId 'com.mrzahidbd.garmentsot'
         minSdk 23
-        targetSdk 35
-        versionCode 1
-        versionName '1.0.0'
+        targetSdk 36
+        versionCode 3
+        versionName '1.1.0'
     }
 }
 
