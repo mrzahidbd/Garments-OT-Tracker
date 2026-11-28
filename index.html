@@ -9,6 +9,7 @@
     <title>আমার হাজিরা ও ওভারটাইম</title>
     <script src="platform-files.js"></script>
     <script src="payslip.js"></script>
+    <script src="shift.js"></script>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -189,6 +190,36 @@
                         মুছুন
                     </button>
                 </div>
+
+                <details id="shiftDetails" class="rounded-xl border border-emerald-200 dark:border-emerald-800">
+                    <summary class="cursor-pointer p-3 text-sm font-bold text-emerald-800 dark:text-emerald-200">
+                        শিফটের সময় থেকে OT
+                        <span id="shiftSaved" class="block text-xs font-medium text-slate-600 dark:text-slate-300"></span>
+                    </summary>
+                    <form id="shiftForm" oninput="previewShift()" onchange="previewShift()" onsubmit="saveSelectedShift(event)" class="px-3 pb-3 space-y-3">
+                        <p class="text-xs text-slate-600 dark:text-slate-300">ডিউটি শুরুর তারিখটি ওপরে বেছে নিন। রাত পেরোলেও OT শুরুর দিনেই সেভ হবে।</p>
+                        <div class="grid grid-cols-2 gap-2">
+                            <label class="min-w-0 text-xs font-bold">ডিউটি শুরু
+                                <input id="shiftStart" type="time" required class="block w-full min-w-0 mt-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-2 text-sm">
+                            </label>
+                            <label class="min-w-0 text-xs font-bold">ডিউটি শেষ
+                                <input id="shiftEnd" type="time" required class="block w-full min-w-0 mt-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-2 text-sm">
+                            </label>
+                            <label class="min-w-0 text-xs font-bold">মোট বিরতি (মিনিট)
+                                <input id="shiftBreak" type="text" inputmode="numeric" required value="০" class="block w-full mt-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-2 text-sm">
+                            </label>
+                            <label class="min-w-0 text-xs font-bold">নিয়মিত কাজ (ঘণ্টা)
+                                <input id="shiftRegular" type="text" inputmode="decimal" required value="৮" class="block w-full mt-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 p-2 text-sm">
+                            </label>
+                        </div>
+                        <div aria-live="polite" class="rounded-lg bg-emerald-50 dark:bg-emerald-950 px-3 py-2">
+                            <p id="shiftResult" class="font-bold text-emerald-800 dark:text-emerald-200">OT হিসাব</p>
+                            <p id="shiftBreakdown" class="text-xs text-slate-600 dark:text-slate-300"></p>
+                        </div>
+                        <p id="shiftSaveHint" class="empty:hidden text-xs text-slate-600 dark:text-slate-300"></p>
+                        <button id="saveShift" type="submit" disabled class="tap-btn w-full py-2.5 rounded-lg bg-emerald-700 text-white text-sm font-bold disabled:opacity-50">শিফট সেভ করুন</button>
+                    </form>
+                </details>
 
                 <!-- 1-Tap Overtime Buttons Grid (+2, +3, +4, +6) -->
                 <div>
@@ -704,11 +735,14 @@
             applyTheme();
         }
 
-        function persistLogs() {
+        function persistLogs(nextLogs) {
             try {
-                localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(attendanceLogs));
+                localStorage.setItem(STORAGE_KEY_LOGS, JSON.stringify(nextLogs));
+                attendanceLogs = nextLogs;
+                return true;
             } catch (e) {
-                showToast('মেমোরিতে সেভ করতে সমস্যা হয়েছে!');
+                showToast('হিসাব সেভ হয়নি। ফোনে খালি জায়গা আছে কি না দেখুন।');
+                return false;
             }
         }
 
@@ -746,16 +780,20 @@
         // 3. DAILY ENTRY ACTIONS
         // ==========================================
         function getEntry(dateStr) {
-            return attendanceLogs[dateStr] || { ot: 0, night: false, holiday: false, tiffin: false, absent: false, note: '' };
+            return attendanceLogs[dateStr] ? {...attendanceLogs[dateStr]} : { ot: 0, night: false, holiday: false, tiffin: false, absent: false, note: '' };
         }
 
         function saveEntry(dateStr, entry) {
-            const isEmpty = (!entry.ot || entry.ot <= 0) && !entry.night && !entry.holiday && !entry.tiffin && !entry.absent && !entry.note;
+            const minutes = otMinutesOf(entry);
+            const shift = entry.absent ? null : cleanShift(entry.shift);
+            const isEmpty = !minutes && !shift && !entry.night && !entry.holiday && !entry.tiffin && !entry.absent && !entry.note;
+            const next = {...attendanceLogs};
             if (isEmpty) {
-                delete attendanceLogs[dateStr];
+                delete next[dateStr];
             } else {
-                attendanceLogs[dateStr] = {
-                    ot: Math.max(0, Number(entry.ot) || 0),
+                next[dateStr] = {
+                    ot: minutes / 60, otMinutes: minutes,
+                    ...(shift ? {shift} : {}),
                     night: Boolean(entry.night),
                     holiday: Boolean(entry.holiday),
                     tiffin: Boolean(entry.tiffin),
@@ -763,33 +801,30 @@
                     note: entry.note || ''
                 };
             }
-            persistLogs();
+            if (!persistLogs(next)) return false;
             const editedDate = parseLocalDate(dateStr);
             activeMonthDate = new Date(editedDate.getFullYear(), editedDate.getMonth(), 1);
             triggerHaptic();
             renderAll();
+            return true;
         }
 
         function addOtHours(hours) {
             const current = getEntry(selectedDateStr);
-            const updatedOt = Math.round((current.ot + hours) * 10) / 10;
-            if (updatedOt > 24) return showToast('এক দিনে ২৪ ঘণ্টার বেশি OT লেখা যায় না।');
-            const autoTiffinTriggered = appSettings.autoTiffin && updatedOt >= 2 ? true : current.tiffin;
-            saveEntry(selectedDateStr, {
-                ...current,
-                ot: updatedOt,
-                absent: false,
-                tiffin: autoTiffinTriggered
-            });
-            showToast(`+${toBnNum(hours)} ঘণ্টা ওভারটাইম সেভ হয়েছে!`);
+            const addedMinutes = Math.round(hours * 60);
+            const otMinutes = otMinutesOf(current) + addedMinutes;
+            if (otMinutes > 1440) return showToast('এক দিনে ২৪ ঘণ্টার বেশি OT লেখা যায় না।');
+            const tiffin = current.tiffin || (appSettings.autoTiffin && otMinutes >= 120);
+            if (saveEntry(selectedDateStr, {...current, otMinutes, absent: false, tiffin})) {
+                showToast('+' + hoursAndMinutes(addedMinutes) + ' ওভারটাইম সেভ হয়েছে');
+            }
         }
 
         function adjustSelectedOt(delta) {
             if (delta > 0) return addOtHours(delta);
             const current = getEntry(selectedDateStr);
-            const updatedOt = Math.max(0, Math.round((current.ot + delta) * 10) / 10);
-            saveEntry(selectedDateStr, { ...current, ot: updatedOt });
-            showToast(`OT: ${toBnNum(updatedOt)} ঘণ্টা`);
+            const otMinutes = Math.max(0, otMinutesOf(current) + Math.round(delta * 60));
+            if (saveEntry(selectedDateStr, {...current, otMinutes})) showToast('OT ' + hoursAndMinutes(otMinutes));
         }
 
         function toggleDuty(type) {
@@ -797,27 +832,27 @@
             if (type === 'night') {
                 current.night = !current.night;
                 if (current.night) current.absent = false;
-                saveEntry(selectedDateStr, current);
+                if (!saveEntry(selectedDateStr, current)) return;
                 showToast(current.night ? '🌙 নাইট ডিউটি যোগ হয়েছে' : 'নাইট ডিউটি বাতিল');
             } else if (type === 'holiday') {
                 current.holiday = !current.holiday;
                 if (current.holiday) current.absent = false;
-                saveEntry(selectedDateStr, current);
+                if (!saveEntry(selectedDateStr, current)) return;
                 showToast(current.holiday ? '📅 হলিডে ডিউটি যোগ হয়েছে' : 'হলিডে ডিউটি বাতিল');
             } else if (type === 'tiffin') {
                 current.tiffin = !current.tiffin;
                 if (current.tiffin) current.absent = false;
-                saveEntry(selectedDateStr, current);
+                if (!saveEntry(selectedDateStr, current)) return;
                 showToast(current.tiffin ? '🍱 টিফিন বিল যোগ হয়েছে' : 'টিফিন বিল বাতিল');
             } else if (type === 'absent') {
                 current.absent = !current.absent;
                 if (current.absent) {
-                    current.ot = 0;
+                    current.otMinutes = 0;
                     current.night = false;
                     current.holiday = false;
                     current.tiffin = false;
                 }
-                saveEntry(selectedDateStr, current);
+                if (!saveEntry(selectedDateStr, current)) return;
                 showToast(current.absent ? '⚠️ অনুপস্থিতি যুক্ত হয়েছে (হাজিরা বোনাস কাটা যেতে পারে)' : 'অনুপস্থিতি বাতিল করা হয়েছে');
             }
         }
@@ -825,7 +860,7 @@
         function setNoteChip(noteText) {
             const current = getEntry(selectedDateStr);
             current.note = current.note === noteText ? '' : noteText;
-            saveEntry(selectedDateStr, current);
+            if (!saveEntry(selectedDateStr, current)) return;
             showToast(current.note ? `নোট যুক্ত: ${current.note}` : 'নোট সরানো হয়েছে');
         }
 
@@ -834,8 +869,9 @@
                 'হিসাব মুছে ফেলুন',
                 'আপনি কি এই তারিখের সব এন্ট্রি মুছে ফেলতে চান?',
                 () => {
-                    delete attendanceLogs[selectedDateStr];
-                    persistLogs();
+                    const next = {...attendanceLogs};
+                    delete next[selectedDateStr];
+                    if (!persistLogs(next)) return;
                     renderAll();
                     showToast('তারিখের হিসাব মুছে ফেলা হয়েছে');
                 }
@@ -849,8 +885,9 @@
                 `${label}-এর হিসাব মুছুন`,
                 'আপনি কি নিশ্চিতভাবে এই দিনের এন্ট্রি ডিলিট করতে চান?',
                 () => {
-                    delete attendanceLogs[dateStr];
-                    persistLogs();
+                    const next = {...attendanceLogs};
+                    delete next[dateStr];
+                    if (!persistLogs(next)) return;
                     renderAll();
                     showToast('এন্ট্রি মুছে ফেলা হয়েছে');
                 }
@@ -860,6 +897,9 @@
         function editDateFromCalendar(dateStr) {
             selectedDateStr = dateStr;
             document.getElementById('entryDateInput').value = selectedDateStr;
+            const d = parseLocalDate(dateStr);
+            activeMonthDate = new Date(d.getFullYear(), d.getMonth(), 1);
+            renderAll();
             switchTab('home');
             showToast('তারিখ নির্বাচন করা হয়েছে');
         }
@@ -872,7 +912,8 @@
             d.setDate(d.getDate() + offsetDays);
             selectedDateStr = formatDateStr(d);
             document.getElementById('entryDateInput').value = selectedDateStr;
-            renderSelectedDayPanel();
+            activeMonthDate = new Date(d.getFullYear(), d.getMonth(), 1);
+            renderAll();
         }
 
         function shiftSelectedDate(deltaDays) {
@@ -904,7 +945,7 @@
         // ==========================================
         function getMonthlyStats(year, monthIndex) {
             const prefix = `${year}-${String(monthIndex + 1).padStart(2, '0')}-`;
-            let totalOt = 0;
+            let totalOtMinutes = 0;
             let totalNight = 0;
             let totalHoliday = 0;
             let totalTiffin = 0;
@@ -916,14 +957,15 @@
                 .sort((a, b) => b.localeCompare(a))
                 .forEach(dateKey => {
                     const item = attendanceLogs[dateKey];
-                    totalOt += item.ot || 0;
+                    const minutes = otMinutesOf(item);
+                    totalOtMinutes += minutes;
                     if (item.night) totalNight += 1;
                     if (item.holiday) totalHoliday += 1;
                     if (item.tiffin) totalTiffin += 1;
                     if (item.absent) totalAbsent += 1;
 
                     const dayBill = Math.round(
-                        ((item.ot || 0) * appSettings.otRate) +
+                        (minutes * appSettings.otRate / 60) +
                         (item.night ? appSettings.nightRate : 0) +
                         (item.holiday ? appSettings.holidayRate : 0) +
                         (item.tiffin ? appSettings.tiffinRate : 0)
@@ -932,8 +974,8 @@
                     entries.push({ dateStr: dateKey, ...item, dayBill });
                 });
 
-            totalOt = Math.round(totalOt * 10) / 10;
-            const otBill = Math.round(totalOt * appSettings.otRate);
+            const totalOt = totalOtMinutes / 60;
+            const otBill = Math.round(totalOtMinutes * appSettings.otRate / 60);
             const nightBill = Math.round(totalNight * appSettings.nightRate);
             const holidayBill = Math.round(totalHoliday * appSettings.holidayRate);
             const tiffinBill = Math.round(totalTiffin * appSettings.tiffinRate);
@@ -942,7 +984,7 @@
             const grandTotal = (appSettings.grossSalary || 0) + extraMoney + bonusEarned;
 
             return {
-                totalOt, totalNight, totalHoliday, totalTiffin, totalAbsent,
+                totalOt, totalOtMinutes, totalNight, totalHoliday, totalTiffin, totalAbsent,
                 otBill, nightBill, holidayBill, tiffinBill, extraMoney, bonusEarned, grandTotal,
                 entries
             };
@@ -959,11 +1001,13 @@
             document.getElementById('selectedDateBn').textContent = `${toBnNum(dObj.getDate())} ${BN_MONTHS[dObj.getMonth()]} (${BN_DAYS[dObj.getDay()]})`;
 
             const entry = getEntry(selectedDateStr);
+            renderShiftForm(entry);
             const parts = [];
             if (entry.absent) {
                 parts.push('🚫 অনুপস্থিত / ছুটি');
             } else {
-                if (entry.ot > 0) parts.push(`${toBnNum(entry.ot)} ঘণ্টা OT`);
+                if (otMinutesOf(entry) || entry.shift) parts.push(hoursAndMinutes(otMinutesOf(entry)) + ' OT');
+                if (entry.shift) parts.push('শিফট ' + shiftRange(entry.shift));
                 if (entry.night) parts.push('🌙 নাইট');
                 if (entry.holiday) parts.push('📅 হলিডে');
                 if (entry.tiffin) parts.push('🍱 টিফিন');
@@ -1031,7 +1075,8 @@
             if (item.absent) {
                 badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-200">🚫 অনুপস্থিত</span>`);
             } else {
-                if (item.ot > 0) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200">${toBnNum(item.ot)} ঘণ্টা OT</span>`);
+                if (otMinutesOf(item) || item.shift) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-200">${hoursAndMinutes(otMinutesOf(item))} OT</span>`);
+                if (item.shift) badges.push(`<span class="text-xs text-slate-600 dark:text-slate-300">${escapeHtml(shiftRange(item.shift))}</span>`);
                 if (item.night) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-amber-100 dark:bg-amber-950 text-amber-800 dark:text-amber-200">🌙 নাইট</span>`);
                 if (item.holiday) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-indigo-100 dark:bg-indigo-950 text-indigo-800 dark:text-indigo-200">📅 হলিডে</span>`);
                 if (item.tiffin) badges.push(`<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-bold bg-lime-100 dark:bg-lime-950 text-lime-800 dark:text-lime-200">🍱 টিফিন</span>`);
@@ -1086,7 +1131,7 @@
                     if (entry.absent) {
                         dots += `<span class="w-2 h-2 rounded-full bg-rose-500"></span>`;
                     } else {
-                        if (entry.ot > 0) otBadge = `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 leading-none">${toBnNum(entry.ot)}h</span>`;
+                        if (otMinutesOf(entry) || entry.shift) otBadge = `<span class="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 leading-none">${toBnNum(minuteClock(otMinutesOf(entry)))}</span>`;
                         if (entry.night) dots += `<span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>`;
                         if (entry.holiday) dots += `<span class="w-1.5 h-1.5 rounded-full bg-indigo-500"></span>`;
                         if (entry.tiffin) dots += `<span class="w-1.5 h-1.5 rounded-full bg-lime-500"></span>`;
@@ -1130,7 +1175,7 @@
             renderPayslipCheck(stats);
 
             // Home summary banner
-            document.getElementById('sumOtHours').textContent = `${toBnNum(stats.totalOt)} ঘণ্টা`;
+            document.getElementById('sumOtHours').textContent = `${hoursAndMinutes(stats.totalOtMinutes)}`;
             document.getElementById('sumNightCount').textContent = `${toBnNum(stats.totalNight)} টি`;
             document.getElementById('sumHolidayCount').textContent = `${toBnNum(stats.totalHoliday)} টি`;
             document.getElementById('sumTiffinCount').textContent = `${toBnNum(stats.totalTiffin)} টি`;
@@ -1156,7 +1201,7 @@
             }
 
             document.getElementById('slipGross').textContent = `৳ ${toBnNum(appSettings.grossSalary)}`;
-            document.getElementById('slipOtFormula').textContent = `${toBnNum(stats.totalOt)} ঘণ্টা × ৳ ${toBnNum(appSettings.otRate)}`;
+            document.getElementById('slipOtFormula').textContent = `${hoursAndMinutes(stats.totalOtMinutes)} × ৳ ${toBnNum(appSettings.otRate)}`;
             document.getElementById('slipOtBill').textContent = `+ ৳ ${toBnNum(stats.otBill)}`;
             document.getElementById('slipNightFormula').textContent = `${toBnNum(stats.totalNight)} টি × ৳ ${toBnNum(appSettings.nightRate)}`;
             document.getElementById('slipNightBill').textContent = `+ ৳ ${toBnNum(stats.nightBill)}`;
@@ -1270,7 +1315,7 @@
             if (appSettings.workerName) text += `নাম: ${appSettings.workerName} ${appSettings.workerId ? `(ID: ${appSettings.workerId})` : ''}\n`;
             if (appSettings.designation) text += `পদবি/লাইন: ${appSettings.designation}\n`;
             text += `------------------------\n`;
-            text += `⏱ মোট ওভারটাইম: ${toBnNum(stats.totalOt)} ঘণ্টা (৳ ${toBnNum(stats.otBill)})\n`;
+            text += `⏱ মোট ওভারটাইম: ${hoursAndMinutes(stats.totalOtMinutes)} (৳ ${toBnNum(stats.otBill)})\n`;
             text += `🌙 মোট নাইট ডিউটি: ${toBnNum(stats.totalNight)} টি (৳ ${toBnNum(stats.nightBill)})\n`;
             text += `📅 মোট হলিডে ডিউটি: ${toBnNum(stats.totalHoliday)} টি (৳ ${toBnNum(stats.holidayBill)})\n`;
             text += `🍱 মোট টিফিন বিল: ${toBnNum(stats.totalTiffin)} টি (৳ ${toBnNum(stats.tiffinBill)})\n`;
@@ -1290,7 +1335,8 @@
                 const tags = [];
                 if (e.absent) tags.push('অনুপস্থিত');
                 else {
-                    if (e.ot > 0) tags.push(`${toBnNum(e.ot)}h OT`);
+                    if (otMinutesOf(e) || e.shift) tags.push(hoursAndMinutes(otMinutesOf(e)) + ' OT');
+                    if (e.shift) tags.push('শিফট ' + shiftRange(e.shift));
                     if (e.night) tags.push('নাইট');
                     if (e.holiday) tags.push('হলিডে');
                     if (e.tiffin) tags.push('টিফিন');
@@ -1329,7 +1375,7 @@
             const backupSettings = { ...appSettings };
             delete backupSettings.pinHash;
             delete backupSettings.pinSalt;
-            const dataStr = JSON.stringify({ version: 3, settings: backupSettings, logs: attendanceLogs, payslips: monthlyPayslips }, null, 2);
+            const dataStr = JSON.stringify({ version: 4, settings: backupSettings, logs: attendanceLogs, payslips: monthlyPayslips }, null, 2);
             const name = `amar_hajira_backup_${formatDateStr(new Date())}.json`;
             saveTrackerFile(name, 'application/json', dataStr);
         }
@@ -1337,14 +1383,19 @@
 
         function exportMonthlyCsv() {
             const stats = getMonthlyStats(activeMonthDate.getFullYear(), activeMonthDate.getMonth());
-            const rows = [['তারিখ','OT ঘণ্টা','নাইট ডিউটি','হলিডে ডিউটি','টিফিন','অনুপস্থিত','দিনের অতিরিক্ত টাকা','নোট']];
+            const rows = [['তারিখ','OT ঘণ্টা','নাইট ডিউটি','হলিডে ডিউটি','টিফিন','অনুপস্থিত','দিনের অতিরিক্ত টাকা','নোট','OT মিনিট','শিফট শুরু','শিফট শেষ','শেষ পরের দিন','বিরতি মিনিট','নিয়মিত কাজ মিনিট']];
             stats.entries.slice().reverse().forEach(function(entry) {
-                rows.push([entry.dateStr, entry.ot || 0, entry.night ? 'হ্যাঁ' : 'না', entry.holiday ? 'হ্যাঁ' : 'না', entry.tiffin ? 'হ্যাঁ' : 'না', entry.absent ? 'হ্যাঁ' : 'না', entry.dayBill || 0, entry.note || '']);
+                const minutes = otMinutesOf(entry);
+                const shift = entry.shift;
+                rows.push([entry.dateStr, Number((minutes / 60).toFixed(6)), entry.night ? 'হ্যাঁ' : 'না', entry.holiday ? 'হ্যাঁ' : 'না', entry.tiffin ? 'হ্যাঁ' : 'না', entry.absent ? 'হ্যাঁ' : 'না', entry.dayBill || 0, entry.note || '',
+                    minutes, shift?.start ?? '', shift?.end ?? '', shift ? (shift.end < shift.start ? 'হ্যাঁ' : 'না') : '',
+                    shift?.breakMinutes ?? '', shift?.regularMinutes ?? '']);
             });
             const comparison = payslipLines(stats, monthlyPayslips[payslipMonth(activeMonthDate)]);
             if (comparison.length) {
-                rows.push(Array(8).fill(''), ['পে-স্লিপের সঙ্গে মিল', payslipMonth(activeMonthDate), '', '', '', '', '', '']);
-                comparison.forEach(([label, value]) => rows.push([label, value, '', '', '', '', '', '']));
+                const padding = Array(rows[0].length - 2).fill('');
+                rows.push(['', '', ...padding], ['পে-স্লিপের সঙ্গে মিল', payslipMonth(activeMonthDate), ...padding]);
+                comparison.forEach(([label, value]) => rows.push([label, value, ...padding]));
             }
             const csv = '\uFEFF' + rows.map(function(row) {
                 return row.map(function(value) { return '"' + String(value ?? '').replace(/"/g, '""') + '"'; }).join(',');
@@ -1492,9 +1543,16 @@
                             const parts = date.split('-').map(Number);
                             const check = new Date(parts[0], parts[1] - 1, parts[2]);
                             if (check.getFullYear() !== parts[0] || check.getMonth() !== parts[1] - 1 || check.getDate() !== parts[2]) return;
-                            const ot = Number(raw.ot);
-                            if (!Number.isFinite(ot) || ot < 0 || ot > 24) return;
-                            cleanLogs[date] = { ot: ot, night: raw.night === true, holiday: raw.holiday === true, tiffin: raw.tiffin === true, absent: raw.absent === true, note: typeof raw.note === 'string' ? raw.note.slice(0, 120) : '' };
+                            const hours = Number(raw.ot);
+                            const validMinutes = Number.isInteger(raw.otMinutes) && raw.otMinutes >= 0 && raw.otMinutes <= 1440;
+                            if (!validMinutes && (!Number.isFinite(hours) || hours < 0 || hours > 24)) return;
+                            const otMinutes = otMinutesOf(raw);
+                            const shift = raw.absent === true ? null : cleanShift(raw.shift);
+                            cleanLogs[date] = {
+                                ot: otMinutes / 60, otMinutes, ...(shift ? {shift} : {}),
+                                night: raw.night === true, holiday: raw.holiday === true, tiffin: raw.tiffin === true,
+                                absent: raw.absent === true, note: typeof raw.note === 'string' ? raw.note.slice(0, 120) : ''
+                            };
                         });
                     }
                     const cleanPayslips = validPayslips(parsed.payslips);

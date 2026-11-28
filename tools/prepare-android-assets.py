@@ -12,5 +12,5 @@ start = page.index("    <!-- Tailwind CSS -->")
 end = page.index("    <style>", start)
 local_css = '    <link rel="stylesheet" href="tracker.css">\n'
 (assets / "index.html").write_text(page[:start] + local_css + page[end:], encoding="utf-8")
-for name in ("platform-files.js", "payslip.js"):
+for name in ("platform-files.js", "payslip.js", "shift.js"):
     shutil.copyfile(root / name, assets / name)

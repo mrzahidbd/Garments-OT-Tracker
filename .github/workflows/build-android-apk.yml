@@ -6,6 +6,7 @@ on:
     paths:
       - 'index.html'
       - 'payslip.js'
+      - 'shift.js'
       - 'platform-files.js'
       - 'app/**'
       - 'tools/**'
@@ -59,7 +60,7 @@ jobs:
           java -jar "$bundletool" validate --bundle="$bundle"
           test "$(java -jar "$bundletool" dump manifest --bundle="$bundle" --xpath='/manifest/@package')" = com.mrzahidbd.garmentsot
           test "$(java -jar "$bundletool" dump manifest --bundle="$bundle" --xpath='/manifest/uses-sdk/@android:targetSdkVersion')" = 36
-          for asset in index.html platform-files.js payslip.js tracker.css; do
+          for asset in index.html platform-files.js payslip.js shift.js tracker.css; do
             unzip -p "$bundle" "base/assets/$asset" | cmp - "app/build/generated/trackerAssets/$asset"
             unzip -p "$apk" "assets/$asset" | cmp - "app/build/generated/trackerAssets/$asset"
           done
