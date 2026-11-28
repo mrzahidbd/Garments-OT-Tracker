@@ -45,6 +45,18 @@ public final class PhoneCheck extends Instrumentation {
             js("document.querySelector('button[aria-label=\"পরের মাস\"]').click();location.reload()");
             untilJs("typeof getMonthlyStats==='function' && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalOt===2.5 && getMonthlyStats(activeMonthDate.getFullYear(),activeMonthDate.getMonth()).totalNight===1 && monthlyPayslips[payslipMonth(activeMonthDate)]?.paidMinutes===90 && attendanceLogs['2022-03-01'].ot===3");
             progress("Legacy data, half-hour entry, Bengali hours and money, monthly separation and persisted payslip comparison passed.");
+            js("document.querySelector('#nav-home').click();var dateField=document.querySelector('#entryDateInput');dateField.value='2024-01-31';dateField.dispatchEvent(new Event('change'));document.querySelector('#shiftDetails').open=true");
+            js("document.querySelector('#shiftStart').value='22:00';document.querySelector('#shiftEnd').value='07:17';document.querySelector('#shiftBreak').value='৩০';document.querySelector('#shiftRegular').value='৮';document.querySelector('#shiftRegular').dispatchEvent(new Event('input',{bubbles:true}))");
+            untilJs("document.querySelector('#shiftResult').textContent.includes('৪৭ মিনিট') && document.querySelector('#shiftBreakdown').textContent.includes('পরের দিন')");
+            js("document.querySelector('#saveShift').click();document.querySelector('#saveShift').click()");
+            untilJs("getMonthlyStats(2024,0).totalOtMinutes===47 && !attendanceLogs['2024-02-01'] && attendanceLogs['2024-01-31'].shift.breakMinutes===30 && document.querySelector('#sumOtHours').textContent==='৪৭ মিনিট'");
+            js("document.querySelector(\"button[onclick='adjustSelectedOt(0.5)']\").click()");
+            untilJs("attendanceLogs['2024-01-31'].otMinutes===77 && document.querySelector('#shiftSaved').textContent.includes('হাতে ঠিক করা')");
+            js("document.querySelector('#saveShift').click();location.reload()");
+            untilJs("typeof attendanceLogs!=='undefined' && attendanceLogs['2024-01-31']?.otMinutes===47 && attendanceLogs['2024-01-31'].shift.end==='07:17'");
+            js("editDateFromCalendar('2024-01-31')");
+            untilJs("document.querySelector('#shiftEnd').value==='07:17' && document.querySelector('#otCheckRecorded').textContent==='৪৭ মিনিট'");
+            progress("Overnight month boundary, exact minutes, repeated save, manual adjustment and persisted shift passed.");
             js("document.querySelector('#nav-settings').click()");
             untilJs("!!document.querySelector(\"button[onclick='exportJsonBackup()']\").offsetWidth");
             String bridge = js("JSON.stringify({save:typeof saveTrackerFile,bridge:typeof window.TrackerFiles,post:typeof (window.TrackerFiles||{}).postMessage,origin:location.origin,name:formatDateStr(new Date()),contentType:document.contentType})");
@@ -71,7 +83,7 @@ public final class PhoneCheck extends Instrumentation {
                         + ", foreground " + foreground + ", " + bridge);
             }
             removeMonitor(monitor);
-            outcome.putString("stream", "PASS: Android 16 offline OT, payslip comparison, existing records, and JSON document picker (" + foreground + ").\n");
+            outcome.putString("stream", "PASS: Android 16 offline shift OT, exact minutes, payslip comparison, existing records, and JSON document picker (" + foreground + ").\n");
             finish(Activity.RESULT_OK, outcome);
         } catch (Throwable e) {
             outcome.putString("stream", "FAIL: " + android.util.Log.getStackTraceString(e) + "\n");
